@@ -1,4 +1,4 @@
-# pntr_nuklear
+# pntr_aseprite
 
 Load [Aseprite](https://www.aseprite.org/) animated sprites for use in [pntr](https://github.com/robloach/pntr).
 
@@ -50,6 +50,11 @@ void pntr_draw_aseprite_tag(pntr_image* dst, pntr_aseprite_tag* tag, int posX, i
 void pntr_aseprite_set_tag_frame(pntr_aseprite_tag* tag, int frameNumber);
 int pntr_aseprite_get_tag_frame(pntr_aseprite_tag* tag);
 ```
+
+## Credits
+
+- [George Sprite](https://opengameart.org/content/alternate-lpc-character-sprites-george) by [Sheep](https://opengameart.org/users/sheep)
+- [cute_aseprite.h](https://github.com/RandyGaul/cute_headers/blob/master/cute_aseprite.h) by [RandyGaul](https://github.com/RandyGaul)
 
 ## License
 
