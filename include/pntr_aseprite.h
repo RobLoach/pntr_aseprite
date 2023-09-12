@@ -38,6 +38,10 @@
 #endif
 #include PNTR_H // NOLINT
 
+#ifndef PNTR_ASEPRITE_API
+    #define PNTR_ASEPRITE_API PNTR_API
+#endif
+
 #ifndef PNTR_ASEPRITE_CUTE_ASEPRITE_H
 #define PNTR_ASEPRITE_CUTE_ASEPRITE_H "cute_aseprite.h"
 #endif
@@ -71,24 +75,24 @@ typedef struct pntr_aseprite_slice {
 } pntr_aseprite_slice;
 
 // pntr_aseprite functions
-pntr_aseprite* pntr_load_aseprite(const char* fileName);
-pntr_aseprite* pntr_load_aseprite_from_memory(unsigned char* fileData, unsigned int size);
-void pntr_unload_aseprite(pntr_aseprite* aseprite);
-pntr_image* pntr_aseprite_image(pntr_aseprite* aseprite);
-int pntr_aseprite_width(pntr_aseprite* aseprite);
-int pntr_aseprite_height(pntr_aseprite* aseprite);
-void pntr_draw_aseprite(pntr_image* dst, pntr_aseprite* aseprite, int frame, int posX, int posY);
+PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite(const char* fileName);
+PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite_from_memory(unsigned char* fileData, unsigned int size);
+PNTR_ASEPRITE_API void pntr_unload_aseprite(pntr_aseprite* aseprite);
+PNTR_ASEPRITE_API pntr_image* pntr_aseprite_image(pntr_aseprite* aseprite);
+PNTR_ASEPRITE_API int pntr_aseprite_width(pntr_aseprite* aseprite);
+PNTR_ASEPRITE_API int pntr_aseprite_height(pntr_aseprite* aseprite);
+PNTR_ASEPRITE_API void pntr_draw_aseprite(pntr_image* dst, pntr_aseprite* aseprite, int frame, int posX, int posY);
 
 // // pntr_aseprite_tag functions
-pntr_aseprite_tag* pntr_load_aseprite_tag(pntr_aseprite* aseprite, const char* name);   // Load an pntr_aseprite tag animation sequence
-pntr_aseprite_tag* pntr_load_aseprite_tag_index(pntr_aseprite* aseprite, int index); // Load an pntr_aseprite tag animation sequence from its index
-int pntr_aseprite_tag_count(pntr_aseprite* aseprite);                         // Get the total amount of available tags
-void pntr_update_aseprite_tag(pntr_aseprite_tag* tag);                           // Update the tag animation frame
-pntr_aseprite_tag* pntr_load_aseprite_tag_default();                                // Generate an empty Tag with sane defaults
-void pntr_unload_aseprite_tag(pntr_aseprite_tag* tag);
-void pntr_draw_aseprite_tag(pntr_image* dst, pntr_aseprite_tag* tag, int posX, int posY);
-void pntr_aseprite_set_tag_frame(pntr_aseprite_tag* tag, int frameNumber);                           // Sets which frame the tag is currently displaying.
-int pntr_aseprite_get_tag_frame(pntr_aseprite_tag* tag);
+PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag(pntr_aseprite* aseprite, const char* name);   // Load an pntr_aseprite tag animation sequence
+PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag_index(pntr_aseprite* aseprite, int index); // Load an pntr_aseprite tag animation sequence from its index
+PNTR_ASEPRITE_API int pntr_aseprite_tag_count(pntr_aseprite* aseprite);                         // Get the total amount of available tags
+PNTR_ASEPRITE_API void pntr_update_aseprite_tag(pntr_aseprite_tag* tag);                           // Update the tag animation frame
+PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag_default();                                // Generate an empty Tag with sane defaults
+PNTR_ASEPRITE_API void pntr_unload_aseprite_tag(pntr_aseprite_tag* tag);
+PNTR_ASEPRITE_API void pntr_draw_aseprite_tag(pntr_image* dst, pntr_aseprite_tag* tag, int posX, int posY);
+PNTR_ASEPRITE_API void pntr_aseprite_set_tag_frame(pntr_aseprite_tag* tag, int frameNumber);                           // Sets which frame the tag is currently displaying.
+PNTR_ASEPRITE_API int pntr_aseprite_get_tag_frame(pntr_aseprite_tag* tag);
 
 // // pntr_aseprite_slice functions
 // pntr_aseprite_slice* Loadpntr_aseprite_slice(pntr_aseprite aseprite, const char* name);   // Load a slice from an pntr_aseprite based on its name.
@@ -96,6 +100,10 @@ int pntr_aseprite_get_tag_frame(pntr_aseprite_tag* tag);
 // int Getpntr_aseprite_sliceCount(pntr_aseprite aseprite);                       // Get the amount of slices that are defined in the pntr_aseprite.
 // bool Ispntr_aseprite_sliceReady(pntr_aseprite_slice slice);                     // Return whether or not the given slice was found.
 //pntr_aseprite_slice Genpntr_aseprite_sliceDefault();                            // Generate empty pntr_aseprite slice data.
+
+#ifdef PNTR_ASSETSYS_API
+PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite_from_assetsys(assetsys_t* sys, const char* path);
+#endif  // PNTR_ASSETSYS_API
 
 #ifdef __cplusplus
 }
@@ -141,10 +149,9 @@ extern "C" {
  * @param fileData The loaded file data for the .aseprite file.
  * @param size The size of file in bytes.
  */
-pntr_aseprite* pntr_load_aseprite_from_memory(unsigned char* fileData, unsigned int size) {
+PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite_from_memory(unsigned char* fileData, unsigned int size) {
     pntr_aseprite* aseprite = pntr_load_memory(sizeof(pntr_aseprite));
     if (aseprite == NULL) {
-        printf("Nope\n");
         return NULL;
     }
     aseprite->ase = 0;
@@ -180,8 +187,6 @@ pntr_aseprite* pntr_load_aseprite_from_memory(unsigned char* fileData, unsigned 
     }
     aseprite->image = image;
     aseprite->ase = ase;
-    printf("Loaded!\n");
-    pntr_save_image(image, "tile.png");
 
     return aseprite;
 }
@@ -193,7 +198,7 @@ pntr_aseprite* pntr_load_aseprite_from_memory(unsigned char* fileData, unsigned 
  *
  * @return The loaded aseprite object, or NULL on failure.
  */
-pntr_aseprite* pntr_load_aseprite(const char* fileName) {
+PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite(const char* fileName) {
     unsigned int bytesRead;
     unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
     if (bytesRead == 0 || fileData == 0) {
@@ -205,7 +210,7 @@ pntr_aseprite* pntr_load_aseprite(const char* fileName) {
     return ase;
 }
 
-pntr_image* pntr_aseprite_image(pntr_aseprite* aseprite) {
+PNTR_ASEPRITE_API pntr_image* pntr_aseprite_image(pntr_aseprite* aseprite) {
     if (aseprite == NULL) {
         return NULL;
     }
@@ -213,7 +218,7 @@ pntr_image* pntr_aseprite_image(pntr_aseprite* aseprite) {
     return aseprite->image;
 }
 
-int pntr_aseprite_width(pntr_aseprite* aseprite) {
+PNTR_ASEPRITE_API int pntr_aseprite_width(pntr_aseprite* aseprite) {
     if (aseprite == NULL || aseprite->ase == NULL) {
         return 0;
     }
@@ -221,7 +226,7 @@ int pntr_aseprite_width(pntr_aseprite* aseprite) {
     return aseprite->ase->w;
 }
 
-int pntr_aseprite_height(pntr_aseprite* aseprite) {
+PNTR_ASEPRITE_API int pntr_aseprite_height(pntr_aseprite* aseprite) {
     if (aseprite == NULL || aseprite->ase == NULL) {
         return 0;
     }
@@ -229,7 +234,7 @@ int pntr_aseprite_height(pntr_aseprite* aseprite) {
     return aseprite->ase->h;
 }
 
-int pntr_aseprite_tag_count(pntr_aseprite* aseprite) {
+PNTR_ASEPRITE_API int pntr_aseprite_tag_count(pntr_aseprite* aseprite) {
     if (aseprite == NULL || aseprite->ase == NULL) {
         return 0;
     }
@@ -237,7 +242,7 @@ int pntr_aseprite_tag_count(pntr_aseprite* aseprite) {
     return aseprite->ase->tag_count;
 }
 
-void pntr_unload_aseprite(pntr_aseprite* aseprite) {
+PNTR_ASEPRITE_API void pntr_unload_aseprite(pntr_aseprite* aseprite) {
     if (aseprite == NULL) {
         return;
     }
@@ -252,9 +257,8 @@ void pntr_unload_aseprite(pntr_aseprite* aseprite) {
 
     pntr_unload_memory(aseprite);
 }
-#include <stdio.h>
 
-void pntr_draw_aseprite(pntr_image* dst, pntr_aseprite* aseprite, int frame, int posX, int posY) {
+PNTR_ASEPRITE_API void pntr_draw_aseprite(pntr_image* dst, pntr_aseprite* aseprite, int frame, int posX, int posY) {
     if (aseprite == NULL || dst == NULL) {
         return;
     }
@@ -272,7 +276,7 @@ void pntr_draw_aseprite(pntr_image* dst, pntr_aseprite* aseprite, int frame, int
  *
  * @param tag The pntr_aseprite_tag passed in by reference (&tag).
  */
-void pntr_aseprite_update_tag(pntr_aseprite_tag* tag, float delta_time) {
+PNTR_ASEPRITE_API void pntr_aseprite_update_tag(pntr_aseprite_tag* tag, float delta_time) {
     if (tag == NULL || tag->tag == NULL || tag->aseprite == NULL) {
         return;
     }
@@ -350,7 +354,7 @@ void pntr_aseprite_update_tag(pntr_aseprite_tag* tag, float delta_time) {
  * @param tag The pntr_aseprite tag to modify.
  * @param frameNumber Which frame to set the active tag to. If negative, will start from the end.
  */
-void pntr_aseprite_set_tag_frame(pntr_aseprite_tag* tag, int frameNumber) {
+PNTR_ASEPRITE_API void pntr_aseprite_set_tag_frame(pntr_aseprite_tag* tag, int frameNumber) {
     // TODO: Need to attribute frame number for ASE_ANIMATION_DIRECTION_BACKWORDS?
     if (frameNumber >= 0) {
         tag->currentFrame = tag->tag->from_frame + frameNumber;
@@ -368,7 +372,7 @@ void pntr_aseprite_set_tag_frame(pntr_aseprite_tag* tag, int frameNumber) {
     }
 }
 
-int pntr_aseprite_get_tag_frame(pntr_aseprite_tag* tag) {
+PNTR_ASEPRITE_API int pntr_aseprite_get_tag_frame(pntr_aseprite_tag* tag) {
     if (tag == NULL) {
         return -1;
     }
@@ -377,7 +381,7 @@ int pntr_aseprite_get_tag_frame(pntr_aseprite_tag* tag) {
     return tag->currentFrame - tag->tag->from_frame;
 }
 
-void pntr_draw_aseprite_tag(pntr_image* dst, pntr_aseprite_tag* tag, int posX, int posY) {
+PNTR_ASEPRITE_API void pntr_draw_aseprite_tag(pntr_image* dst, pntr_aseprite_tag* tag, int posX, int posY) {
     if (tag == NULL) {
         return;
     }
@@ -389,7 +393,7 @@ void pntr_draw_aseprite_tag(pntr_image* dst, pntr_aseprite_tag* tag, int posX, i
  *
  * @return An pntr_aseprite_tag with sane defaults.
  */
-pntr_aseprite_tag* pntr_load_aseprite_tag_default() {
+PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag_default() {
     pntr_aseprite_tag* tag = pntr_load_memory(sizeof(pntr_aseprite_tag));
     if (tag == NULL) {
         return NULL;
@@ -419,7 +423,7 @@ pntr_aseprite_tag* pntr_load_aseprite_tag_default() {
  * @see Loadpntr_aseprite_tag()
  * @see Ispntr_aseprite_tagReady()
  */
-pntr_aseprite_tag* pntr_load_aseprite_tag_index(pntr_aseprite* aseprite, int index) {
+PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag_index(pntr_aseprite* aseprite, int index) {
     if (aseprite == NULL) {
         return NULL;
     }
@@ -482,7 +486,7 @@ pntr_aseprite_tag* pntr_load_aseprite_tag_index(pntr_aseprite* aseprite, int ind
  * @see Ispntr_aseprite_tagReady()
  * @see Updatepntr_aseprite_tag()
  */
-pntr_aseprite_tag* pntr_load_aseprite_tag(pntr_aseprite* aseprite, const char* name) {
+PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag(pntr_aseprite* aseprite, const char* name) {
     if (aseprite == NULL) {
         return NULL;
     }
@@ -503,7 +507,7 @@ pntr_aseprite_tag* pntr_load_aseprite_tag(pntr_aseprite* aseprite, const char* n
     return NULL;
 }
 
-void pntr_unload_aseprite_tag(pntr_aseprite_tag* tag) {
+PNTR_ASEPRITE_API void pntr_unload_aseprite_tag(pntr_aseprite_tag* tag) {
     pntr_unload_memory(tag);
 }
 
@@ -580,6 +584,18 @@ void pntr_unload_aseprite_tag(pntr_aseprite_tag* tag) {
 // bool Ispntr_aseprite_sliceReady(pntr_aseprite_slice slice) {
 //     return TextLength(slice.name) != 0;
 // }
+
+#ifdef PNTR_ASSETSYS_API
+PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite_from_assetsys(assetsys_t* sys, const char* path) {
+    unsigned int size;
+    unsigned char* data = pntr_load_file_from_assetsys(sys, path, &size);
+    if (data == NULL) {
+        return NULL;
+    }
+
+    return pntr_load_aseprite_from_memory(data, size);
+}
+#endif  // PNTR_ASSETSYS_API
 
 #ifdef __cplusplus
 }

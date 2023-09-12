@@ -1,7 +1,7 @@
 #include <stdio.h>
 
-#define WIDTH 480
-#define HEIGHT 270
+#define WIDTH 240
+#define HEIGHT 135
 
 #define PNTR_ENABLE_DEFAULT_FONT
 //#define PNTR_ENABLE_FILTER_SMOOTH
@@ -36,7 +36,8 @@ bool Update(pntr_app* app, pntr_image* screen) {
             WIDTH / 2 - pntr_aseprite_width(appData->george) / 2,
             HEIGHT / 2 - pntr_aseprite_height(appData->george) / 2);
 
-    appData->frame += 0.05f;
+    // Update the active frame
+    appData->frame += pntr_app_delta_time(app) * 4.0f;
     if (appData->frame >= 4) {
         appData->frame = 0;
     }

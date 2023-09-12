@@ -20,5 +20,8 @@ int main() {
 
     pntr_save_image(output, "pntr_aseprite_test.png");
 
+    pntr_unload_image(output);
+    pntr_unload_aseprite(aseprite);
+
     return 0;
 }
