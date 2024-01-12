@@ -62,7 +62,7 @@ typedef struct pntr_aseprite_tag {
     float timer;        // The countdown timer in seconds
     int direction;      // Whether we are moving forwards, or backwards through the frames
     float speed;        // The animation speed factor (1 is normal speed, 2 is double speed)
-    pntr_color color;        // The color provided for the tag
+    pntr_color color;   // The color provided for the tag
     bool loop;          // Whether to continue to play the animation when the animation finishes
     bool paused;        // Set to true to not progression of the animation
     pntr_aseprite* aseprite;  // The loaded Aseprite file
@@ -70,8 +70,8 @@ typedef struct pntr_aseprite_tag {
 } pntr_aseprite_tag;
 
 typedef struct pntr_aseprite_slice {
-    char* name;         // The name of the slice.
-    pntr_rectangle bounds;   // The rectangle outer bounds for the slice.
+    char* name;             // The name of the slice.
+    pntr_rectangle bounds;  // The rectangle outer bounds for the slice.
 } pntr_aseprite_slice;
 
 // pntr_aseprite functions
@@ -177,12 +177,12 @@ PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite_from_memory(unsigned char* f
     int transparency  = ase->transparent_palette_entry_index;
     if (transparency >= 0 && transparency < ase->palette.entry_count) {
         ase_color_t transparentColor = ase->palette.entries[transparency].color;
-        pntr_color source = {
-            .r = transparentColor.r,
-            .g = transparentColor.g,
-            .b = transparentColor.b,
-            .a = transparentColor.a
-        };
+        pntr_color source = pntr_new_color(
+            transparentColor.r,
+            transparentColor.g,
+            transparentColor.b,
+            transparentColor.a
+        );
         pntr_image_color_replace(image, source, PNTR_BLANK);
     }
     aseprite->image = image;
@@ -465,9 +465,9 @@ PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag_index(pntr_aseprite*
     tag->timer = (float)(ase->frames[tag->currentFrame].duration_milliseconds) / 1000.0f;
 
     // Color
-    tag->color.r = (unsigned char)tag->tag->r;
-    tag->color.g = (unsigned char)tag->tag->g;
-    tag->color.b = (unsigned char)tag->tag->b;
+    pntr_color_set_r(&tag->color, (unsigned char)tag->tag->r);
+    pntr_color_set_g(&tag->color, (unsigned char)tag->tag->g);
+    pntr_color_set_b(&tag->color, (unsigned char)tag->tag->b);
 
     // Name
     tag->name = (char*)tag->tag->name;
