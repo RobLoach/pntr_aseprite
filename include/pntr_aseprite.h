@@ -42,18 +42,20 @@
     #define PNTR_ASEPRITE_API PNTR_API
 #endif
 
-#ifndef PNTR_ASEPRITE_CUTE_ASEPRITE_H
-#define PNTR_ASEPRITE_CUTE_ASEPRITE_H "cute_aseprite.h"
-#endif
-#include PNTR_ASEPRITE_CUTE_ASEPRITE_H
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+// Aseprite Dependencies
+struct ase_t; /** @see cute_aseprite.h */
+struct ase_tag_t; /** @see cute_aseprite.h */
+
+/**
+ * The main Aseprite object that contains the loaded Aseprite file.
+ */
 typedef struct pntr_aseprite {
-    ase_t* ase;
-    pntr_image* image;
+    struct ase_t* ase; /** The cute_aseprite object */
+    pntr_image* image; /** The aseprite image data */
 } pntr_aseprite;
 
 typedef struct pntr_aseprite_tag {
@@ -66,7 +68,7 @@ typedef struct pntr_aseprite_tag {
     bool loop;          // Whether to continue to play the animation when the animation finishes
     bool paused;        // Set to true to not progression of the animation
     pntr_aseprite* aseprite;  // The loaded Aseprite file
-    ase_tag_t* tag;     // The active tag to act upon
+    struct ase_tag_t* tag;     // The active tag to act upon
 } pntr_aseprite_tag;
 
 typedef struct pntr_aseprite_slice {
@@ -140,6 +142,10 @@ extern "C" {
 
 #ifndef CUTE_ASEPRITE_IMPLEMENTATION
 #define CUTE_ASEPRITE_IMPLEMENTATION
+#endif
+
+#ifndef PNTR_ASEPRITE_CUTE_ASEPRITE_H
+#define PNTR_ASEPRITE_CUTE_ASEPRITE_H "cute_aseprite.h"
 #endif
 #include PNTR_ASEPRITE_CUTE_ASEPRITE_H // NOLINT
 
