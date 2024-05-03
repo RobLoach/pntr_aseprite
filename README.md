@@ -38,6 +38,7 @@ pntr_image* pntr_aseprite_image(pntr_aseprite* aseprite);
 int pntr_aseprite_width(pntr_aseprite* aseprite);
 int pntr_aseprite_height(pntr_aseprite* aseprite);
 void pntr_draw_aseprite(pntr_image* dst, pntr_aseprite* aseprite, int frame, int posX, int posY);
+pntr_image pntr_aseprite_frame(pntr_aseprite* aseprite, int frame);
 
 // // pntr_aseprite_tag functions
 pntr_aseprite_tag* pntr_load_aseprite_tag(pntr_aseprite* aseprite, const char* name);

@@ -33,22 +33,18 @@
 #ifndef PNTR_ASEPRITE_H__
 #define PNTR_ASEPRITE_H__
 
-#ifndef PNTR_H
-#define PNTR_H "pntr.h"
-#endif
-#include PNTR_H // NOLINT
-
 #ifndef PNTR_ASEPRITE_API
     #define PNTR_ASEPRITE_API PNTR_API
 #endif
 
+#ifndef PNTR_ASEPRITE_CUTE_ASEPRITE_H
+#define PNTR_ASEPRITE_CUTE_ASEPRITE_H "cute_aseprite.h"
+#endif
+#include PNTR_ASEPRITE_CUTE_ASEPRITE_H // NOLINT
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-// Aseprite Dependencies
-struct ase_t; /** @see cute_aseprite.h */
-struct ase_tag_t; /** @see cute_aseprite.h */
 
 /**
  * The main Aseprite object that contains the loaded Aseprite file.
@@ -84,6 +80,7 @@ PNTR_ASEPRITE_API pntr_image* pntr_aseprite_image(pntr_aseprite* aseprite);
 PNTR_ASEPRITE_API int pntr_aseprite_width(pntr_aseprite* aseprite);
 PNTR_ASEPRITE_API int pntr_aseprite_height(pntr_aseprite* aseprite);
 PNTR_ASEPRITE_API void pntr_draw_aseprite(pntr_image* dst, pntr_aseprite* aseprite, int frame, int posX, int posY);
+PNTR_ASEPRITE_API pntr_image pntr_aseprite_frame(pntr_aseprite* aseprite, int frame);
 
 // // pntr_aseprite_tag functions
 PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag(pntr_aseprite* aseprite, const char* name);   // Load an pntr_aseprite tag animation sequence
@@ -142,10 +139,6 @@ extern "C" {
 
 #ifndef CUTE_ASEPRITE_IMPLEMENTATION
 #define CUTE_ASEPRITE_IMPLEMENTATION
-#endif
-
-#ifndef PNTR_ASEPRITE_CUTE_ASEPRITE_H
-#define PNTR_ASEPRITE_CUTE_ASEPRITE_H "cute_aseprite.h"
 #endif
 #include PNTR_ASEPRITE_CUTE_ASEPRITE_H // NOLINT
 
@@ -275,6 +268,26 @@ PNTR_ASEPRITE_API void pntr_draw_aseprite(pntr_image* dst, pntr_aseprite* asepri
 
     pntr_rectangle source = {frame * aseprite->ase->w, 0, aseprite->ase->w, aseprite->ase->h};
     pntr_draw_image_rec(dst, aseprite->image, source, posX, posY);
+}
+
+PNTR_ASEPRITE_API pntr_image pntr_aseprite_frame(pntr_aseprite* aseprite, int frame) {
+    if (aseprite == NULL || aseprite->ase == NULL || frame < 0 || frame >= aseprite->ase->frame_count) {
+        return PNTR_CLITERAL(pntr_image) {0};
+    }
+
+    return PNTR_CLITERAL(pntr_image) {
+        .data = &PNTR_PIXEL(aseprite->image, frame * aseprite->ase->w, 0),
+        .subimage = true,
+        .width = aseprite->ase->w,
+        .height = aseprite->ase->h,
+        .pitch = aseprite->image->pitch,
+        .clip = PNTR_CLITERAL(pntr_rectangle) {
+            .x = 0,
+            .y = 0,
+            .width = aseprite->ase->w,
+            .height = aseprite->ase->h
+        }
+    };
 }
 
 /**
