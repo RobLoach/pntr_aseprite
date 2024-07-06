@@ -1,8 +1,6 @@
 #include <stdio.h>
 
-#define PNTR_DISABLE_MATH
 #define PNTR_IMPLEMENTATION
-//#define PNTR_ENABLE_DEFAULT_FONT
 #include "pntr.h"
 #include "pntr_assert.h"
 

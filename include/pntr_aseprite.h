@@ -114,19 +114,35 @@ PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite_from_assetsys(assetsys_t* sy
 #ifndef PNTR_ASEPRITE_IMPLEMENTATION_ONCE
 #define PNTR_ASEPRITE_IMPLEMENTATION_ONCE
 
-#include <string.h> // strcmp
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// Have cute_aseprite report warnings
-//#define CUTE_ASEPRITE_WARNING(msg)
+#ifndef PNTR_STRCMP
+#include <string.h>  // strcmp
+#define PNTR_STRCMP strcmp
+#endif
 
-//#define CUTE_ASEPRITE_ASSERT(condition) do { if (!(condition)) { TraceLog(LOG_WARNING, "ASEPRITE: Failed assert \"%s\" in %s:%i", #condition, __FILE__, __LINE__); } } while(0)
+// TODO: Have cute_aseprite report warnings?
+#define CUTE_ASEPRITE_WARNING(msg)
+
+// For cute_aseprite asserts, use PNTR_ASSERT(). Otherwise, ignore them.
+#ifdef PNTR_ASSERT
+#define CUTE_ASEPRITE_ASSERT(condition) PNTR_ASSERT(condition)
+#else
+#define CUTE_ASEPRITE_ASSERT(condition)
+#endif
 
 #define CUTE_ASEPRITE_ALLOC(size, ctx) pntr_load_memory((int)(size))
 #define CUTE_ASEPRITE_FREE(mem, ctx) pntr_unload_memory((void*)(mem))
+
+#ifndef CUTE_ASEPRITE_MEMCPY
+#define CUTE_ASEPRITE_MEMCPY PNTR_MEMCPY
+#endif
+
+#ifndef CUTE_ASEPRITE_MEMSET
+#define CUTE_ASEPRITE_MEMSET PNTR_MEMSET
+#endif
 
 #define CUTE_ASEPRITE_SEEK_SET 0
 #define CUTE_ASEPRITE_SEEK_END 0
@@ -317,16 +333,6 @@ PNTR_ASEPRITE_API void pntr_aseprite_update_tag(pntr_aseprite_tag* tag, float de
     // Advance the frame and see if it's time to reset the position.
     tag->currentFrame += tag->direction;
     switch (aseTag->loop_animation_direction) {
-        case ASE_ANIMATION_DIRECTION_FORWARDS:
-            if (tag->currentFrame > aseTag->to_frame) {
-                if (tag->loop) {
-                    tag->currentFrame = aseTag->from_frame;
-                } else {
-                    tag->currentFrame = aseTag->to_frame;
-                    tag->paused = true;
-                }
-            }
-        break;
         case ASE_ANIMATION_DIRECTION_BACKWORDS:
             if (tag->currentFrame < aseTag->from_frame) {
                 if (tag->loop) {
@@ -360,11 +366,21 @@ PNTR_ASEPRITE_API void pntr_aseprite_update_tag(pntr_aseprite_tag* tag, float de
                 }
             }
         break;
+        case ASE_ANIMATION_DIRECTION_FORWARDS:
+        default:
+            if (tag->currentFrame > aseTag->to_frame) {
+                if (tag->loop) {
+                    tag->currentFrame = aseTag->from_frame;
+                } else {
+                    tag->currentFrame = aseTag->to_frame;
+                    tag->paused = true;
+                }
+            }
+        break;
     }
 
-    // Reset the timer.
-    // TODO(RobLoach): Add the original tag->timer to make up the different in frame time?
-    tag->timer = (float)(ase->frames[tag->currentFrame].duration_milliseconds) / 1000.0f /* + tag->timer; */;
+    // Reset the timer, considering the offset of the animation.
+    tag->timer += (float)(ase->frames[tag->currentFrame].duration_milliseconds) / 1000.0f;
 }
 
 /**
@@ -518,7 +534,7 @@ PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag(pntr_aseprite* asepr
 
     // Loop through all tags to find the correct name.
     for (int i = 0; i < ase->tag_count; i++) {
-        if (strcmp(name, ase->tags[i].name) == 0) {
+        if (PNTR_STRCMP(name, ase->tags[i].name) == 0) {
             return pntr_load_aseprite_tag_index(aseprite, i);
         }
     }
