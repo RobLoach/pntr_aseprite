@@ -37,14 +37,6 @@ bool Update(pntr_app* app, pntr_image* screen) {
     return true;
 }
 
-void Event(pntr_app* app, pntr_app_event* event) {
-    AppData* appData = (AppData*)pntr_app_userdata(app);
-    if (appData == NULL) {
-        return;
-    }
-
-}
-
 void Close(pntr_app* app) {
     AppData* appData = (AppData*)pntr_app_userdata(app);
     pntr_unload_aseprite(appData->george);
@@ -58,7 +50,6 @@ pntr_app Main(int argc, char* argv[]) {
         .init = Init,
         .update = Update,
         .close = Close,
-        .event = Event,
         .fps = 60,
         .userData = pntr_load_memory(sizeof(AppData)),
     };

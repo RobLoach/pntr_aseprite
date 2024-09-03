@@ -42,10 +42,6 @@
 #endif
 #include PNTR_ASEPRITE_CUTE_ASEPRITE_H // NOLINT
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * The main Aseprite object that contains the loaded Aseprite file.
  */
@@ -67,30 +63,95 @@ typedef struct pntr_aseprite_tag {
     struct ase_tag_t* tag;     // The active tag to act upon
 } pntr_aseprite_tag;
 
+/*
 typedef struct pntr_aseprite_slice {
     char* name;             // The name of the slice.
     pntr_rectangle bounds;  // The rectangle outer bounds for the slice.
 } pntr_aseprite_slice;
+*/
 
-// pntr_aseprite functions
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * Load an .aseprite file through its memory data.
+ *
+ * @param fileData The loaded file data for the .aseprite file.
+ * @param size The size of file in bytes.
+ *
+ * @return The loaded aseprite object, or NULL on failure.
+ */
 PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite(const char* fileName);
+
+/**
+ * Load an .aseprite file.
+ *
+ * @param fileName The path to the file to load.
+ *
+ * @return The loaded aseprite object, or NULL on failure.
+ */
 PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite_from_memory(unsigned char* fileData, unsigned int size);
+
+/**
+ * Unloads the given aseprite.
+ *
+ * @param aseprite The aseprite object to unload.
+ *
+ * @see pntr_load_aseprite()
+ */
 PNTR_ASEPRITE_API void pntr_unload_aseprite(pntr_aseprite* aseprite);
+
+/**
+ * Get the image data from the aseprite object.
+ *
+ * @param aseprite The aseprite object to get the image data from.
+ *
+ * @return The image data from the aseprite object.
+ */
 PNTR_ASEPRITE_API pntr_image* pntr_aseprite_image(pntr_aseprite* aseprite);
 PNTR_ASEPRITE_API int pntr_aseprite_width(pntr_aseprite* aseprite);
 PNTR_ASEPRITE_API int pntr_aseprite_height(pntr_aseprite* aseprite);
 PNTR_ASEPRITE_API void pntr_draw_aseprite(pntr_image* dst, pntr_aseprite* aseprite, int frame, int posX, int posY);
 PNTR_ASEPRITE_API pntr_image pntr_aseprite_frame(pntr_aseprite* aseprite, int frame);
+PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag(pntr_aseprite* aseprite, const char* name);
 
-// // pntr_aseprite_tag functions
-PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag(pntr_aseprite* aseprite, const char* name);   // Load an pntr_aseprite tag animation sequence
-PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag_index(pntr_aseprite* aseprite, int index); // Load an pntr_aseprite tag animation sequence from its index
-PNTR_ASEPRITE_API int pntr_aseprite_tag_count(pntr_aseprite* aseprite);                         // Get the total amount of available tags
-PNTR_ASEPRITE_API void pntr_update_aseprite_tag(pntr_aseprite_tag* tag);                           // Update the tag animation frame
-PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag_default();                                // Generate an empty Tag with sane defaults
+/**
+ * Load an pntr_aseprite tag from the given index.
+ *
+ * @param aseprite The loaded pntr_aseprite object from which to load the tag->
+ * @param index The tag index within the pntr_aseprite object.
+ *
+ * @return The pntr_aseprite tag information, or an empty tag on failure.
+ *
+ * @see pntr_load_aseprite_tag()
+ */
+PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag_index(pntr_aseprite* aseprite, int index);
+PNTR_ASEPRITE_API int pntr_aseprite_tag_count(pntr_aseprite* aseprite);
+
+/**
+ * Updates a tag to progress through its animation frame.
+ *
+ * @param tag The pntr_aseprite_tag passed in by reference (&tag).
+ */
+PNTR_ASEPRITE_API void pntr_update_aseprite_tag(pntr_aseprite_tag* tag);
+
+/**
+ * Generate an aseprite tag with sane defaults.
+ *
+ * @return An pntr_aseprite_tag with sane defaults.
+ */
+PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag_default();
 PNTR_ASEPRITE_API void pntr_unload_aseprite_tag(pntr_aseprite_tag* tag);
 PNTR_ASEPRITE_API void pntr_draw_aseprite_tag(pntr_image* dst, pntr_aseprite_tag* tag, int posX, int posY);
-PNTR_ASEPRITE_API void pntr_aseprite_set_tag_frame(pntr_aseprite_tag* tag, int frameNumber);                           // Sets which frame the tag is currently displaying.
+
+/**
+ * Set which frame the pntr_aseprite tag is on.
+ *
+ * @param tag The pntr_aseprite tag to modify.
+ * @param frameNumber Which frame to set the active tag to. If negative, will start from the end.
+ */
+PNTR_ASEPRITE_API void pntr_aseprite_set_tag_frame(pntr_aseprite_tag* tag, int frameNumber);
 PNTR_ASEPRITE_API int pntr_aseprite_get_tag_frame(pntr_aseprite_tag* tag);
 
 // // pntr_aseprite_slice functions
@@ -113,10 +174,6 @@ PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite_from_assetsys(assetsys_t* sy
 #ifdef PNTR_ASEPRITE_IMPLEMENTATION
 #ifndef PNTR_ASEPRITE_IMPLEMENTATION_ONCE
 #define PNTR_ASEPRITE_IMPLEMENTATION_ONCE
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #ifndef PNTR_STRCMP
 #include <string.h>  // strcmp
@@ -158,11 +215,17 @@ extern "C" {
 #endif
 #include PNTR_ASEPRITE_CUTE_ASEPRITE_H // NOLINT
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Load an .aseprite file through its memory data.
  *
  * @param fileData The loaded file data for the .aseprite file.
  * @param size The size of file in bytes.
+ *
+ * @return The loaded aseprite object, or NULL on failure.
  */
 PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite_from_memory(unsigned char* fileData, unsigned int size) {
     pntr_aseprite* aseprite = pntr_load_memory(sizeof(pntr_aseprite));
@@ -206,13 +269,6 @@ PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite_from_memory(unsigned char* f
     return aseprite;
 }
 
-/**
- * Load an .aseprite file.
- *
- * @param fileName The path to the file to load.
- *
- * @return The loaded aseprite object, or NULL on failure.
- */
 PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite(const char* fileName) {
     unsigned int bytesRead;
     unsigned char* fileData = pntr_load_file(fileName, &bytesRead);
@@ -306,11 +362,6 @@ PNTR_ASEPRITE_API pntr_image pntr_aseprite_frame(pntr_aseprite* aseprite, int fr
     };
 }
 
-/**
- * Updates a tag to progress through its animation frame.
- *
- * @param tag The pntr_aseprite_tag passed in by reference (&tag).
- */
 PNTR_ASEPRITE_API void pntr_aseprite_update_tag(pntr_aseprite_tag* tag, float delta_time) {
     if (tag == NULL || tag->tag == NULL || tag->aseprite == NULL) {
         return;
@@ -383,12 +434,6 @@ PNTR_ASEPRITE_API void pntr_aseprite_update_tag(pntr_aseprite_tag* tag, float de
     tag->timer += (float)(ase->frames[tag->currentFrame].duration_milliseconds) / 1000.0f;
 }
 
-/**
- * Set which frame the pntr_aseprite tag is on.
- *
- * @param tag The pntr_aseprite tag to modify.
- * @param frameNumber Which frame to set the active tag to. If negative, will start from the end.
- */
 PNTR_ASEPRITE_API void pntr_aseprite_set_tag_frame(pntr_aseprite_tag* tag, int frameNumber) {
     // TODO: Need to attribute frame number for ASE_ANIMATION_DIRECTION_BACKWORDS?
     if (frameNumber >= 0) {
@@ -423,11 +468,6 @@ PNTR_ASEPRITE_API void pntr_draw_aseprite_tag(pntr_image* dst, pntr_aseprite_tag
     pntr_draw_aseprite(dst, tag->aseprite, tag->currentFrame, posX, posY);
 }
 
-/**
- * Generate an aseprite tag with sane defaults.
- *
- * @return An pntr_aseprite_tag with sane defaults.
- */
 PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag_default() {
     pntr_aseprite_tag* tag = pntr_load_memory(sizeof(pntr_aseprite_tag));
     if (tag == NULL) {
@@ -447,17 +487,6 @@ PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag_default() {
     return tag;
 }
 
-/**
- * Load an pntr_aseprite tag from the given index.
- *
- * @param aseprite The loaded pntr_aseprite object from which to load the tag->
- * @param index The tag index within the pntr_aseprite object.
- *
- * @return The pntr_aseprite tag information, or an empty tag on failure.
- *
- * @see Loadpntr_aseprite_tag()
- * @see Ispntr_aseprite_tagReady()
- */
 PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag_index(pntr_aseprite* aseprite, int index) {
     if (aseprite == NULL) {
         return NULL;
