@@ -88,6 +88,7 @@ PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite(const char* fileName);
  * Load an .aseprite file.
  *
  * @param fileName The path to the file to load.
+ * @param size The size of the memory in bytes.
  *
  * @return The loaded aseprite object, or NULL on failure.
  */
@@ -110,10 +111,34 @@ PNTR_ASEPRITE_API void pntr_unload_aseprite(pntr_aseprite* aseprite);
  * @return The image data from the aseprite object.
  */
 PNTR_ASEPRITE_API pntr_image* pntr_aseprite_image(pntr_aseprite* aseprite);
+
+/**
+ * Get the width of the aseprite.
+ *
+ * @return The width of the aseprite.
+ */
 PNTR_ASEPRITE_API int pntr_aseprite_width(pntr_aseprite* aseprite);
+
+/**
+ * Get the height of the aseprite.
+ *
+ * @return The width of the aseprite.
+ */
 PNTR_ASEPRITE_API int pntr_aseprite_height(pntr_aseprite* aseprite);
 PNTR_ASEPRITE_API void pntr_draw_aseprite(pntr_image* dst, pntr_aseprite* aseprite, int frame, int posX, int posY);
 PNTR_ASEPRITE_API pntr_image pntr_aseprite_frame(pntr_aseprite* aseprite, int frame);
+
+/**
+ * Load an pntr_aseprite tag from the given name.
+ *
+ * @param aseprite The pntr_aseprite object to load the tag from.
+ * @param name The name of the tag to be loaded.
+ *
+ * @return The loaded pntr_aseprite tag, or an empty tag on failure.
+ *
+ * @see Ispntr_aseprite_tagReady()
+ * @see Updatepntr_aseprite_tag()
+ */
 PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag(pntr_aseprite* aseprite, const char* name);
 
 /**
@@ -219,14 +244,6 @@ PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite_from_assetsys(assetsys_t* sy
 extern "C" {
 #endif
 
-/**
- * Load an .aseprite file through its memory data.
- *
- * @param fileData The loaded file data for the .aseprite file.
- * @param size The size of file in bytes.
- *
- * @return The loaded aseprite object, or NULL on failure.
- */
 PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite_from_memory(unsigned char* fileData, unsigned int size) {
     pntr_aseprite* aseprite = pntr_load_memory(sizeof(pntr_aseprite));
     if (aseprite == NULL) {
@@ -539,17 +556,6 @@ PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag_index(pntr_aseprite*
     return tag;
 }
 
-/**
- * Load an pntr_aseprite tag from the given name.
- *
- * @param aseprite The pntr_aseprite object to load the tag from.
- * @param name The name of the tag to be loaded.
- *
- * @return The loaded pntr_aseprite tag, or an empty tag on failure.
- *
- * @see Ispntr_aseprite_tagReady()
- * @see Updatepntr_aseprite_tag()
- */
 PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag(pntr_aseprite* aseprite, const char* name) {
     if (aseprite == NULL) {
         return NULL;

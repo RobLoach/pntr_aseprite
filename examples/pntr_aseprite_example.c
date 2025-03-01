@@ -24,9 +24,11 @@ bool Update(pntr_app* app, pntr_image* screen) {
 
     pntr_clear_background(screen, PNTR_WHITE);
 
-    pntr_draw_aseprite(screen, appData->george, (int)appData->frame,
-            WIDTH / 2 - pntr_aseprite_width(appData->george) / 2,
-            HEIGHT / 2 - pntr_aseprite_height(appData->george) / 2);
+    pntr_draw_aseprite(screen, appData->george,
+        (int)appData->frame,
+        WIDTH / 2 - pntr_aseprite_width(appData->george) / 2,
+        HEIGHT / 2 - pntr_aseprite_height(appData->george) / 2
+    );
 
     // Update the active frame
     appData->frame += pntr_app_delta_time(app) * 4.0f;
