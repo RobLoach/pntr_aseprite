@@ -471,8 +471,15 @@ PNTR_ASEPRITE_API void pntr_aseprite_update_tag(pntr_aseprite_tag* tag, float de
     tag->timer += (float)(ase->frames[tag->currentFrame].duration_milliseconds) / 1000.0f;
 }
 
+// Frame numbers below are relative to the tag's own frame range, counted from
+// from_frame regardless of which way the animation plays.
+// TODO: Need to attribute frame number for ASE_ANIMATION_DIRECTION_BACKWORDS?
+
 PNTR_ASEPRITE_API void pntr_aseprite_set_tag_frame(pntr_aseprite_tag* tag, int frameNumber) {
-    // TODO: Need to attribute frame number for ASE_ANIMATION_DIRECTION_BACKWORDS?
+    if (tag == NULL || tag->tag == NULL) {
+        return;
+    }
+
     if (frameNumber >= 0) {
         tag->currentFrame = tag->tag->from_frame + frameNumber;
     }
@@ -490,11 +497,10 @@ PNTR_ASEPRITE_API void pntr_aseprite_set_tag_frame(pntr_aseprite_tag* tag, int f
 }
 
 PNTR_ASEPRITE_API int pntr_aseprite_get_tag_frame(pntr_aseprite_tag* tag) {
-    if (tag == NULL) {
+    if (tag == NULL || tag->tag == NULL) {
         return -1;
     }
 
-    // TODO: Need to attribute frame number for ASE_ANIMATION_DIRECTION_BACKWORDS?
     return tag->currentFrame - tag->tag->from_frame;
 }
 

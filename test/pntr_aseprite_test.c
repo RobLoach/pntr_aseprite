@@ -48,8 +48,28 @@ void test_update_tag(pntr_aseprite* aseprite) {
     pntr_unload_aseprite_tag(tag);
 }
 
+/**
+ * The frame accessors must tolerate a tag that has no ase_tag_t behind it, which is
+ * exactly what pntr_load_aseprite_tag_default() hands out.
+ */
+void test_tag_frame_without_tag() {
+    pntr_aseprite_tag* tag = pntr_load_aseprite_tag_default();
+    PNTR_ASSERT(tag);
+    PNTR_ASSERT(tag->tag == NULL);
+
+    pntr_aseprite_set_tag_frame(tag, 3);
+    PNTR_ASSERT_EQUALS(pntr_aseprite_get_tag_frame(tag), -1);
+
+    pntr_unload_aseprite_tag(tag);
+
+    // And no tag at all.
+    pntr_aseprite_set_tag_frame(NULL, 3);
+    PNTR_ASSERT_EQUALS(pntr_aseprite_get_tag_frame(NULL), -1);
+}
+
 int main() {
     test_load_failures();
+    test_tag_frame_without_tag();
 
     pntr_aseprite* aseprite = pntr_load_aseprite("resources/george.aseprite");
     PNTR_ASSERT(aseprite);
