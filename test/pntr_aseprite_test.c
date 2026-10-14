@@ -24,11 +24,37 @@ void test_load_failures() {
     PNTR_ASSERT(pntr_load_aseprite("resources/zero_frames.aseprite") == NULL);
 }
 
+/**
+ * Stepping a tag with more time than the frame's duration must advance the frame.
+ */
+void test_update_tag(pntr_aseprite* aseprite) {
+    pntr_aseprite_tag* tag = pntr_load_aseprite_tag(aseprite, "Walk-Down");
+    PNTR_ASSERT(tag);
+    PNTR_ASSERT_EQUALS(tag->currentFrame, 1);
+    PNTR_ASSERT_EQUALS(pntr_aseprite_get_tag_frame(tag), 0);
+
+    // Every frame in george.aseprite lasts 200ms, so a larger step advances the frame.
+    pntr_aseprite_update_tag(tag, 0.25f);
+    PNTR_ASSERT_EQUALS(tag->currentFrame, 2);
+    PNTR_ASSERT_EQUALS(pntr_aseprite_get_tag_frame(tag), 1);
+
+    // A step that doesn't run the timer out leaves the frame where it was.
+    pntr_aseprite_update_tag(tag, 0.01f);
+    PNTR_ASSERT_EQUALS(tag->currentFrame, 2);
+
+    // Updating nothing must not crash.
+    pntr_aseprite_update_tag(NULL, 0.25f);
+
+    pntr_unload_aseprite_tag(tag);
+}
+
 int main() {
     test_load_failures();
 
     pntr_aseprite* aseprite = pntr_load_aseprite("resources/george.aseprite");
     PNTR_ASSERT(aseprite);
+
+    test_update_tag(aseprite);
 
     pntr_image* output = pntr_gen_image_color(100, 100, PNTR_WHITE);
     PNTR_ASSERT(output);

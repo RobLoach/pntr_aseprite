@@ -44,7 +44,7 @@ pntr_image pntr_aseprite_frame(pntr_aseprite* aseprite, int frame);
 pntr_aseprite_tag* pntr_load_aseprite_tag(pntr_aseprite* aseprite, const char* name);
 pntr_aseprite_tag* pntr_load_aseprite_tag_index(pntr_aseprite* aseprite, int index);
 int pntr_aseprite_tag_count(pntr_aseprite* aseprite);
-void pntr_update_aseprite_tag(pntr_aseprite_tag* tag);
+void pntr_aseprite_update_tag(pntr_aseprite_tag* tag, float delta_time);
 pntr_aseprite_tag* pntr_load_aseprite_tag_default();
 void pntr_unload_aseprite_tag(pntr_aseprite_tag* tag);
 void pntr_draw_aseprite_tag(pntr_image* dst, pntr_aseprite_tag* tag, int posX, int posY);

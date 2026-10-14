@@ -166,8 +166,10 @@ PNTR_ASEPRITE_API int pntr_aseprite_tag_count(pntr_aseprite* aseprite);
  * Updates a tag to progress through its animation frame.
  *
  * @param tag The pntr_aseprite_tag passed in by reference (&tag).
+ * @param delta_time How much time has passed, in seconds, since the last update. This
+ * is scaled by the tag's speed and counted off its frame timer.
  */
-PNTR_ASEPRITE_API void pntr_update_aseprite_tag(pntr_aseprite_tag* tag);
+PNTR_ASEPRITE_API void pntr_aseprite_update_tag(pntr_aseprite_tag* tag, float delta_time);
 
 /**
  * Generate an aseprite tag with sane defaults.

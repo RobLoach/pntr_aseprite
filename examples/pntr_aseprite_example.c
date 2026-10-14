@@ -9,14 +9,23 @@
 
 typedef struct AppData {
     pntr_aseprite* george;
-    float frame;
+    pntr_aseprite_tag* walk;
 } AppData;
 
 bool Init(pntr_app* app) {
     AppData* appData = (AppData*)pntr_app_userdata(app);
-    appData->george = pntr_load_aseprite("resources/george.aseprite");
+    appData->george = NULL;
+    appData->walk = NULL;
 
-    return appData->george != NULL;
+    appData->george = pntr_load_aseprite("resources/george.aseprite");
+    if (appData->george == NULL) {
+        return false;
+    }
+
+    // Use the walk cycle that's authored in the file, along with its frame timings.
+    appData->walk = pntr_load_aseprite_tag(appData->george, "Walk-Down");
+
+    return appData->walk != NULL;
 }
 
 bool Update(pntr_app* app, pntr_image* screen) {
@@ -24,23 +33,20 @@ bool Update(pntr_app* app, pntr_image* screen) {
 
     pntr_clear_background(screen, PNTR_WHITE);
 
-    pntr_draw_aseprite(screen, appData->george,
-        (int)appData->frame,
+    // Progress the animation, and draw whichever frame it landed on.
+    pntr_aseprite_update_tag(appData->walk, pntr_app_delta_time(app));
+
+    pntr_draw_aseprite_tag(screen, appData->walk,
         WIDTH / 2 - pntr_aseprite_width(appData->george) / 2,
         HEIGHT / 2 - pntr_aseprite_height(appData->george) / 2
     );
-
-    // Update the active frame
-    appData->frame += pntr_app_delta_time(app) * 4.0f;
-    if (appData->frame >= 4) {
-        appData->frame = 0;
-    }
 
     return true;
 }
 
 void Close(pntr_app* app) {
     AppData* appData = (AppData*)pntr_app_userdata(app);
+    pntr_unload_aseprite_tag(appData->walk);
     pntr_unload_aseprite(appData->george);
 }
 
