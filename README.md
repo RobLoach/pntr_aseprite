@@ -70,6 +70,25 @@ void pntr_aseprite_set_tag_frame(pntr_aseprite_tag* tag, int frameNumber);
 int pntr_aseprite_get_tag_frame(pntr_aseprite_tag* tag);
 ```
 
+### Limitations
+
+Layers are composited with the **Normal** blend mode only. Layer and cel opacity are
+applied, but a layer set to Multiply, Screen, Overlay, Add or any other mode is
+composited as though it were Normal, so it will not match what Aseprite shows.
+
+Loading reports this, and anything else it finds, through `PNTR_ASEPRITE_WARNING()`.
+It does nothing by default, so define it before including the header to see them:
+
+``` c
+void MyWarning(const char* message) {
+    printf("pntr_aseprite: %s\n", message);
+}
+#define PNTR_ASEPRITE_WARNING(message) MyWarning(message)
+
+#define PNTR_ASEPRITE_IMPLEMENTATION
+#include "pntr_aseprite.h"
+```
+
 ## Credits
 
 - [George Sprite](https://opengameart.org/content/alternate-lpc-character-sprites-george) by [Sheep](https://opengameart.org/users/sheep)

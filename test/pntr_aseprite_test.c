@@ -4,6 +4,14 @@
 #include "pntr.h"
 #include "pntr_assert.h"
 
+// Count the parser's warnings, so the test can check that they are surfaced.
+static int warningCount = 0;
+void test_warning(const char* message) {
+    (void)message;
+    warningCount++;
+}
+#define PNTR_ASEPRITE_WARNING(message) test_warning(message)
+
 #define PNTR_ASEPRITE_IMPLEMENTATION
 #include "pntr_aseprite.h"
 
@@ -93,10 +101,30 @@ void test_rgba_mode_keeps_palette_colored_pixels() {
     pntr_unload_aseprite(aseprite);
 }
 
+/**
+ * Only the Normal blend mode is composited, so the parser's complaint about any other
+ * one must reach the configured PNTR_ASEPRITE_WARNING() handler rather than be dropped.
+ *
+ * multiply.aseprite is rgba_palette.aseprite with its layer's blend mode set to
+ * Multiply (3) instead of Normal (0).
+ */
+void test_blend_mode_warning() {
+    // Everything loaded so far uses Normal, so nothing should have warned yet.
+    PNTR_ASSERT_EQUALS(warningCount, 0);
+
+    pntr_aseprite* aseprite = pntr_load_aseprite("resources/multiply.aseprite");
+    PNTR_ASSERT(aseprite);
+    PNTR_ASSERT_EQUALS(warningCount, 1);
+
+    pntr_unload_aseprite(aseprite);
+    warningCount = 0;
+}
+
 int main() {
     test_load_failures();
     test_tag_frame_without_tag();
     test_rgba_mode_keeps_palette_colored_pixels();
+    test_blend_mode_warning();
 
     pntr_aseprite* aseprite = pntr_load_aseprite("resources/george.aseprite");
     PNTR_ASSERT(aseprite);

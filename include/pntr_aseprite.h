@@ -215,8 +215,21 @@ PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite_from_assetsys(assetsys_t* sy
 #define PNTR_STRCMP strcmp
 #endif
 
-// TODO: Have cute_aseprite report warnings?
-#define CUTE_ASEPRITE_WARNING(msg)
+#ifndef PNTR_ASEPRITE_WARNING
+/**
+ * Reports a non-fatal warning raised while parsing an .aseprite file.
+ *
+ * Does nothing by default. Define it before including pntr_aseprite.h to receive the
+ * warnings, where msg is a null-terminated string describing what was found. The most
+ * notable warning is an unsupported layer blend mode, as only Normal is composited.
+ *
+ * @param msg The warning message, as a const char*.
+ */
+#define PNTR_ASEPRITE_WARNING(msg) ((void)(msg))
+#endif
+
+// For cute_aseprite warnings, use PNTR_ASEPRITE_WARNING().
+#define CUTE_ASEPRITE_WARNING(msg) PNTR_ASEPRITE_WARNING(msg)
 
 // For cute_aseprite asserts, use PNTR_ASSERT(). Otherwise, ignore them.
 #ifdef PNTR_ASSERT
