@@ -18,13 +18,31 @@ int main() {
     int posX = 10;
     int posY = 10;
     int frameNumber = 0;
-    pntr_draw_aseprite(output, sprite, frameNumber, 10, 10);
+    pntr_draw_aseprite(output, aseprite, frameNumber, posX, posY);
 
     pntr_save_image(output, "output.png");
 
-    pntr_unload_aseprite(sprite);
+    pntr_unload_image(output);
+    pntr_unload_aseprite(aseprite);
     return 0;
 }
+```
+
+### Animation
+
+Aseprite tags carry their own frame range and timings. Load one, step it with how
+much time has passed, and draw whichever frame it lands on:
+
+``` c
+pntr_aseprite* aseprite = pntr_load_aseprite("sprite.aseprite");
+pntr_aseprite_tag* tag = pntr_load_aseprite_tag(aseprite, "Walk-Down");
+
+// Each time around your game loop...
+pntr_aseprite_update_tag(tag, deltaTime);
+pntr_draw_aseprite_tag(screen, tag, posX, posY);
+
+pntr_unload_aseprite_tag(tag);
+pntr_unload_aseprite(aseprite);
 ```
 
 ### API
