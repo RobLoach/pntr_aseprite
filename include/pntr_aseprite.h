@@ -249,19 +249,39 @@ PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite_from_assetsys(assetsys_t* sy
 #define CUTE_ASEPRITE_MEMSET PNTR_MEMSET
 #endif
 
+// pntr owns all file access, so cute_aseprite is handed a memory buffer that it treats
+// as a FILE*. These stubs are deliberately no-ops: CUTE_ASEPRITE_FOPEN() casts the
+// buffer through, CUTE_ASEPRITE_FTELL() has to report a size, and seeking, reading and
+// closing have nothing left to do. Defining them to anything real would hand file
+// access back to libc and break pntr_load_aseprite_from_memory().
 #define CUTE_ASEPRITE_SEEK_SET 0
 #define CUTE_ASEPRITE_SEEK_END 0
 #define CUTE_ASEPRITE_FILE void
 #define CUTE_ASEPRITE_FOPEN(file, property) (CUTE_ASEPRITE_FILE*)file
-#define CUTE_ASEPRITE_FSEEK(fp, sz, pos) (0)
-#define CUTE_ASEPRITE_FREAD(data, sz, num, fp) (0)
+#define CUTE_ASEPRITE_FSEEK(fp, sz, pos) ((void)0)
+#define CUTE_ASEPRITE_FREAD(data, sz, num, fp) ((void)0)
 #define CUTE_ASEPRITE_FTELL(fp) (0)
-#define CUTE_ASEPRITE_FCLOSE(fp) (0)
+#define CUTE_ASEPRITE_FCLOSE(fp) ((void)0)
 
 #ifndef CUTE_ASEPRITE_IMPLEMENTATION
 #define CUTE_ASEPRITE_IMPLEMENTATION
 #endif
+
+// cute_aseprite.h is vendored, so treat it like a system header and keep its own
+// warnings out of builds that enable them. Most of these only appear when PNTR_ASSERT
+// is undefined, which leaves the variables that its asserts would have used unread.
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#if !defined(__clang__)
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#endif
+#endif
 #include PNTR_ASEPRITE_CUTE_ASEPRITE_H // NOLINT
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 #ifdef __cplusplus
 extern "C" {

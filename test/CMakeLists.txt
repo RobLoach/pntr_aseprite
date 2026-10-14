@@ -14,5 +14,13 @@ target_link_libraries(pntr_aseprite_test PUBLIC
 )
 set_property(TARGET pntr_aseprite_test PROPERTY C_STANDARD 99)
 
+# Warnings are enabled here rather than on the pntr_aseprite interface target, so that
+# consumers don't inherit them.
+if (MSVC)
+    target_compile_options(pntr_aseprite_test PRIVATE /W4)
+else()
+    target_compile_options(pntr_aseprite_test PRIVATE -Wall -Wextra)
+endif()
+
 # Set up the test
 add_test(NAME pntr_aseprite_test COMMAND pntr_aseprite_test)

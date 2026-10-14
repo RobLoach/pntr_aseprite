@@ -32,6 +32,14 @@ foreach (example_source ${example_sources})
             pntr_aseprite
         )
         target_compile_definitions(${example_name_raylib} PUBLIC PNTR_APP_RAYLIB)
+
+        # Warnings are enabled here rather than on the pntr_aseprite interface target,
+        # so that consumers don't inherit them.
+        if (MSVC)
+            target_compile_options(${example_name_raylib} PRIVATE /W4)
+        else()
+            target_compile_options(${example_name_raylib} PRIVATE -Wall -Wextra)
+        endif()
     endif()
 
 endforeach ()
