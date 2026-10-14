@@ -67,9 +67,36 @@ void test_tag_frame_without_tag() {
     PNTR_ASSERT_EQUALS(pntr_aseprite_get_tag_frame(NULL), -1);
 }
 
+/**
+ * An RGBA sprite that happens to carry a palette must keep every opaque pixel, even
+ * one whose color is identical to the transparent palette entry.
+ *
+ * rgba_palette.aseprite is a hand-built 2x1 single-frame RGBA file holding one old
+ * palette chunk (0x0004) whose only entry is an opaque rgb(10, 20, 30), a
+ * transparent_palette_entry_index of 0, and one raw cel of two opaque pixels:
+ * rgba(10, 20, 30, 255), which matches that palette entry, and rgba(200, 100, 50, 255),
+ * which does not. The transparent palette entry is only meaningful for indexed
+ * sprites, so neither pixel may be touched here.
+ */
+void test_rgba_mode_keeps_palette_colored_pixels() {
+    pntr_aseprite* aseprite = pntr_load_aseprite("resources/rgba_palette.aseprite");
+    PNTR_ASSERT(aseprite);
+    PNTR_ASSERT_EQUALS(pntr_aseprite_width(aseprite), 2);
+    PNTR_ASSERT_EQUALS(pntr_aseprite_height(aseprite), 1);
+
+    pntr_image* image = pntr_aseprite_image(aseprite);
+    PNTR_ASSERT(image);
+
+    PNTR_ASSERT_COLOR_EQUALS(pntr_image_get_color(image, 0, 0), pntr_new_color(10, 20, 30, 255));
+    PNTR_ASSERT_COLOR_EQUALS(pntr_image_get_color(image, 1, 0), pntr_new_color(200, 100, 50, 255));
+
+    pntr_unload_aseprite(aseprite);
+}
+
 int main() {
     test_load_failures();
     test_tag_frame_without_tag();
+    test_rgba_mode_keeps_palette_colored_pixels();
 
     pntr_aseprite* aseprite = pntr_load_aseprite("resources/george.aseprite");
     PNTR_ASSERT(aseprite);

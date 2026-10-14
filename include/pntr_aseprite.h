@@ -289,18 +289,8 @@ PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite_from_memory(unsigned char* f
         pntr_unload_image(tile);
     }
 
-    // Apply the transparent pixel.
-    int transparency  = ase->transparent_palette_entry_index;
-    if (transparency >= 0 && transparency < ase->palette.entry_count) {
-        ase_color_t transparentColor = ase->palette.entries[transparency].color;
-        pntr_color source = pntr_new_color(
-            transparentColor.r,
-            transparentColor.g,
-            transparentColor.b,
-            transparentColor.a
-        );
-        pntr_image_color_replace(image, source, PNTR_BLANK);
-    }
+    // The transparent palette entry needs no handling here: cute_aseprite already
+    // decodes any indexed pixel using it as a fully blank color.
     aseprite->image = image;
 
     return aseprite;
