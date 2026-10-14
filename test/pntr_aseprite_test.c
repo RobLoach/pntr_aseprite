@@ -7,7 +7,26 @@
 #define PNTR_ASEPRITE_IMPLEMENTATION
 #include "pntr_aseprite.h"
 
+/**
+ * Loading a malformed .aseprite file must fail cleanly, without leaking the parsed
+ * file or freeing an uninitialized image pointer.
+ */
+void test_load_failures() {
+    // A missing file.
+    PNTR_ASSERT(pntr_load_aseprite("resources/does_not_exist.aseprite") == NULL);
+
+    // An empty buffer.
+    PNTR_ASSERT(pntr_load_aseprite_from_memory(NULL, 0) == NULL);
+    PNTR_ASSERT(pntr_load_aseprite_from_memory(NULL, 128) == NULL);
+
+    // A header-only file that parses, but carries no frames, so it is rejected after
+    // cute_aseprite has already allocated for it.
+    PNTR_ASSERT(pntr_load_aseprite("resources/zero_frames.aseprite") == NULL);
+}
+
 int main() {
+    test_load_failures();
+
     pntr_aseprite* aseprite = pntr_load_aseprite("resources/george.aseprite");
     PNTR_ASSERT(aseprite);
 

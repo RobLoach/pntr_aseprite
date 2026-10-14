@@ -253,14 +253,25 @@ extern "C" {
 #endif
 
 PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite_from_memory(unsigned char* fileData, unsigned int size) {
+    if (fileData == NULL || size == 0) {
+        return NULL;
+    }
+
     pntr_aseprite* aseprite = pntr_load_memory(sizeof(pntr_aseprite));
     if (aseprite == NULL) {
         return NULL;
     }
-    aseprite->ase = 0;
 
-    ase_t* ase = cute_aseprite_load_from_memory(fileData, (int)size, 0);
-    if (ase == 0 || ase->frame_count == 0 || ase->w == 0 || ase->h == 0) {
+    // pntr_load_memory() does not zero the allocation, and pntr_unload_aseprite() tests
+    // both of these fields, so neither may be left indeterminate.
+    aseprite->image = NULL;
+
+    // Publish the parsed file right away so pntr_unload_aseprite() owns it, even when
+    // the checks below reject it.
+    aseprite->ase = cute_aseprite_load_from_memory(fileData, (int)size, 0);
+
+    ase_t* ase = aseprite->ase;
+    if (ase == NULL || ase->frame_count == 0 || ase->w == 0 || ase->h == 0) {
         pntr_unload_aseprite(aseprite);
         return NULL;
     }
@@ -289,7 +300,6 @@ PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite_from_memory(unsigned char* f
         pntr_image_color_replace(image, source, PNTR_BLANK);
     }
     aseprite->image = image;
-    aseprite->ase = ase;
 
     return aseprite;
 }
