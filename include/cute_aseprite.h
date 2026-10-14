@@ -749,11 +749,58 @@ typedef struct ase_state_t
 	uint8_t* in;
 	uint8_t* end;
 	void* mem_ctx;
+	int error; // BEGIN pntr_aseprite LOCAL PATCH: set once a read has run past `end`.
 } ase_state_t;
+
+// pntr_aseprite LOCAL PATCH (report upstream to https://github.com/RandyGaul/cute_headers)
+//
+// Every read helper below guarded itself with an assert of the shape
+//
+//     CUTE_ASEPRITE_ASSERT(s->in <= s->end + sizeof(T));
+//
+// which adds the read size to the wrong side of the comparison. `s->end + sizeof(T)`
+// is past the end of the buffer, so the condition holds for any in-pointer that is
+// merely a few bytes over, and the check is a no-op in practice. Worse, an assert
+// compiles out entirely under NDEBUG, which is exactly the build that would then read
+// out of bounds: a truncated .aseprite file walks off the end of the buffer instead of
+// being rejected.
+//
+// s_bounds_ok() implements the intended test, `s->in + num_bytes <= s->end`, written as
+// a subtraction so it cannot form an out-of-range pointer. It records the failure on the
+// parser state and returns 0 rather than asserting, so that:
+//
+//   * the read helpers can hand back a zero value without touching memory, and
+//   * cute_aseprite_load_from_memory() can unwind through the CUTE_ASEPRITE_CHECK() /
+//     `ase_err` mechanism this file already uses for DEFLATE errors, and return NULL.
+//
+// Once s->error is set it is sticky, so any reads between the failure and the next
+// check are harmless no-ops.
+static int s_bounds_ok(ase_state_t* s, size_t num_bytes)
+{
+	if (s->error) return 0;
+	if (s->in > s->end || (size_t)(s->end - s->in) < num_bytes) {
+		s->error = 1;
+		return 0;
+	}
+	return 1;
+}
+
+// The reason handed to CUTE_ASEPRITE_CHECK() whenever s->error is found to be set.
+#define CUTE_ASEPRITE_TRUNCATED "Unexpected end of file; the .aseprite file is truncated or malformed."
+//
+// Relatedly, every validation of a file-derived value inside
+// cute_aseprite_load_from_memory() was a CUTE_ASEPRITE_ASSERT() and is now a
+// CUTE_ASEPRITE_CHECK(). An assert aborts a debug build where returning NULL was wanted,
+// and compiles out entirely under NDEBUG, which left the release build to carry on with
+// a value it had just decided was invalid. Several of them guard writes into fixed-size
+// arrays on `ase` -- the layer, cel, tag, palette and slice counts -- so with the asserts
+// compiled out a malformed file could write past the end of those arrays.
+// END pntr_aseprite LOCAL PATCH
 
 static uint8_t s_read_uint8(ase_state_t* s)
 {
-	CUTE_ASEPRITE_ASSERT(s->in <= s->end + sizeof(uint8_t));
+	// pntr_aseprite LOCAL PATCH: real bounds check, see s_bounds_ok() above.
+	if (!s_bounds_ok(s, sizeof(uint8_t))) return 0;
 	uint8_t** p = &s->in;
 	uint8_t value = **p;
 	++(*p);
@@ -762,7 +809,8 @@ static uint8_t s_read_uint8(ase_state_t* s)
 
 static uint16_t s_read_uint16(ase_state_t* s)
 {
-	CUTE_ASEPRITE_ASSERT(s->in <= s->end + sizeof(uint16_t));
+	// pntr_aseprite LOCAL PATCH: real bounds check, see s_bounds_ok() above.
+	if (!s_bounds_ok(s, sizeof(uint16_t))) return 0;
 	uint8_t** p = &s->in;
 	uint16_t value;
 	value = (*p)[0];
@@ -781,7 +829,8 @@ static ase_fixed_t s_read_fixed(ase_state_t* s)
 
 static uint32_t s_read_uint32(ase_state_t* s)
 {
-	CUTE_ASEPRITE_ASSERT(s->in <= s->end + sizeof(uint32_t));
+	// pntr_aseprite LOCAL PATCH: real bounds check, see s_bounds_ok() above.
+	if (!s_bounds_ok(s, sizeof(uint32_t))) return 0;
 	uint8_t** p = &s->in;
 	uint32_t value;
 	value  = (*p)[0];
@@ -796,7 +845,8 @@ static uint32_t s_read_uint32(ase_state_t* s)
 // s_read_uint64() is not currently used.
 static uint64_t s_read_uint64(ase_state_t* s)
 {
-	CUTE_ASEPRITE_ASSERT(s->in <= s->end + sizeof(uint64_t));
+	// pntr_aseprite LOCAL PATCH: real bounds check, see s_bounds_ok() above.
+	if (!s_bounds_ok(s, sizeof(uint64_t))) return 0;
 	uint8_t** p = &s->in;
 	uint64_t value;
 	value  = (*p)[0];
@@ -828,6 +878,11 @@ static void s_read_bytes(ase_state_t* s, uint8_t* bytes, int num_bytes)
 static const char* s_read_string(ase_state_t* s)
 {
 	int len = (int)s_read_uint16(s);
+	// pntr_aseprite LOCAL PATCH: don't allocate for a string the file is too short to
+	// hold. Returning NULL is safe: the caller stores it and the chunk loop's error
+	// check unwinds to `ase_err` before any name is ever dereferenced, and
+	// cute_aseprite_free() tolerates a NULL name.
+	if (!s_bounds_ok(s, (size_t)len)) return NULL;
 	char* bytes = (char*)CUTE_ASEPRITE_ALLOC(len + 1, s->mem_ctx);
 	for (int i = 0; i < len; ++i) {
 		bytes[i] = (char)s_read_uint8(s);
@@ -838,7 +893,14 @@ static const char* s_read_string(ase_state_t* s)
 
 static void s_skip(ase_state_t* ase, int num_bytes)
 {
-	CUTE_ASEPRITE_ASSERT(ase->in <= ase->end + num_bytes);
+	// pntr_aseprite LOCAL PATCH: real bounds check, see s_bounds_ok() above. A negative
+	// count would rewind the in-pointer, so reject it rather than seeking backwards;
+	// chunk sizes reach this function straight from the file.
+	if (num_bytes < 0) {
+		ase->error = 1;
+		return;
+	}
+	if (!s_bounds_ok(ase, (size_t)num_bytes)) return;
 	ase->in += num_bytes;
 }
 
@@ -940,15 +1002,21 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 	ase_t* ase = (ase_t*)CUTE_ASEPRITE_ALLOC(sizeof(ase_t), mem_ctx);
 	CUTE_ASEPRITE_MEMSET(ase, 0, sizeof(*ase));
 
-	ase_state_t state = { 0, 0, 0 };
+	ase_state_t state = { 0, 0, 0, 0 }; // pntr_aseprite LOCAL PATCH: added `error`.
 	ase_state_t* s = &state;
 	s->in = (uint8_t*)memory;
 	s->end = s->in + size;
 	s->mem_ctx = mem_ctx;
 
+	// pntr_aseprite LOCAL PATCH: a negative or absurd size would put `end` before `in`.
+	CUTE_ASEPRITE_CHECK(memory != NULL && size >= 0, "No .aseprite data to parse.");
+
 	s_skip(s, sizeof(uint32_t)); // File size.
 	int magic = (int)s_read_uint16(s);
-	CUTE_ASEPRITE_ASSERT(magic == 0xA5E0);
+	// pntr_aseprite LOCAL PATCH: reject a bad magic instead of only asserting it, so
+	// that a release build stops here too rather than parsing arbitrary data.
+	CUTE_ASEPRITE_CHECK(!s->error, CUTE_ASEPRITE_TRUNCATED);
+	CUTE_ASEPRITE_CHECK(magic == 0xA5E0, "Not an .aseprite file (bad header magic).");
 
 	ase->frame_count = (int)s_read_uint16(s);
 	ase->w = s_read_uint16(s);
@@ -957,7 +1025,7 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 	if (bpp == 4) ase->mode = ASE_MODE_RGBA;
 	else if (bpp == 2) ase->mode = ASE_MODE_GRAYSCALE;
 	else {
-		CUTE_ASEPRITE_ASSERT(bpp == 1);
+		CUTE_ASEPRITE_CHECK(bpp == 1, "Unexpected bits per pixel in .aseprite file.");
 		ase->mode = ASE_MODE_INDEXED;
 	}
 	uint32_t valid_layer_opacity = s_read_uint32(s) & 1;
@@ -974,8 +1042,29 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 	ase->grid_h = (int)s_read_uint16(s);
 	s_skip(s, 84); // For future use (set to zero).
 
+	// pntr_aseprite LOCAL PATCH: the whole header has to have been readable before any
+	// of the values above can be trusted to size an allocation or bound a loop.
+	CUTE_ASEPRITE_CHECK(!s->error, CUTE_ASEPRITE_TRUNCATED);
+
+	// pntr_aseprite LOCAL PATCH: frame_count comes straight off the file and sizes the
+	// allocation below, where `(int)sizeof(ase_frame_t) * ase->frame_count` would
+	// overflow well before the count reached its 65535 ceiling. Every frame costs at
+	// least a 16-byte frame header on disk, so a count that cannot fit in what is left
+	// of the buffer is garbage. This also keeps the allocation proportional to the input
+	// rather than letting a 128-byte file ask for hundreds of megabytes.
+	CUTE_ASEPRITE_CHECK((size_t)ase->frame_count <= (size_t)(s->end - s->in) / 16,
+		"Frame count is larger than the .aseprite file can hold.");
+
 	ase->frames = (ase_frame_t*)CUTE_ASEPRITE_ALLOC((int)(sizeof(ase_frame_t)) * ase->frame_count, mem_ctx);
-	CUTE_ASEPRITE_MEMSET(ase->frames, 0, sizeof(ase_frame_t) * (size_t)ase->frame_count);
+	// pntr_aseprite LOCAL PATCH: frame_count 0 makes this a 0-byte allocation, which may
+	// legitimately come back NULL. cute_aseprite_free() walks frame_count entries of
+	// this array, so the two must not disagree.
+	CUTE_ASEPRITE_CHECK(ase->frames != NULL || ase->frame_count == 0, "Out of memory.");
+	if (ase->frames == NULL) {
+		ase->frame_count = 0;
+	} else {
+		CUTE_ASEPRITE_MEMSET(ase->frames, 0, sizeof(ase_frame_t) * (size_t)ase->frame_count);
+	}
 
 	ase_udata_t* last_udata = NULL;
 	int was_on_tags = 0;
@@ -989,7 +1078,11 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 		frame->ase = ase;
 		s_skip(s, sizeof(uint32_t)); // Frame size.
 		magic = (int)s_read_uint16(s);
-		CUTE_ASEPRITE_ASSERT(magic == 0xF1FA);
+		// pntr_aseprite LOCAL PATCH: stop at the first frame the file is too short to
+		// hold, rather than looping frame_count times over an exhausted buffer, and
+		// reject a bad frame magic in release builds too rather than only asserting it.
+		CUTE_ASEPRITE_CHECK(!s->error, CUTE_ASEPRITE_TRUNCATED);
+		CUTE_ASEPRITE_CHECK(magic == 0xF1FA, "Invalid frame header magic in .aseprite file.");
 		int chunk_count = (int)s_read_uint16(s);
 		frame->duration_milliseconds = s_read_uint16(s);
 		if (frame->duration_milliseconds == 0) frame->duration_milliseconds = speed;
@@ -1030,7 +1123,7 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 			}	break;
 			case 0x2004: // Layer chunk.
 			{
-				CUTE_ASEPRITE_ASSERT(ase->layer_count < CUTE_ASEPRITE_MAX_LAYERS);
+				CUTE_ASEPRITE_CHECK(ase->layer_count < CUTE_ASEPRITE_MAX_LAYERS, "Too many layers in .aseprite file.");
 				ase_layer_t* layer = ase->layers + ase->layer_count++;
 				layer->flags = (ase_layer_flags_t)s_read_uint16(s);
 				layer->type = (ase_layer_type_t)s_read_uint16(s);
@@ -1053,7 +1146,7 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 
 			case 0x2005: // Cel chunk.
 			{
-				CUTE_ASEPRITE_ASSERT(frame->cel_count < CUTE_ASEPRITE_MAX_LAYERS);
+				CUTE_ASEPRITE_CHECK(frame->cel_count < CUTE_ASEPRITE_MAX_LAYERS, "Too many cels in an .aseprite frame.");
 				ase_cel_t* cel = frame->cels + frame->cel_count++;
 				int layer_index = (int)s_read_uint16(s);
 				cel->layer = ase->layers + layer_index;
@@ -1084,9 +1177,9 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 					int zlib_byte1 = s_read_uint8(s);
 					int deflate_bytes = (int)chunk_size - (int)(s->in - chunk_start);
 					void* pixels = s->in;
-					CUTE_ASEPRITE_ASSERT((zlib_byte0 & 0x0F) == 0x08); // Only zlib compression method (RFC 1950) is supported.
-					CUTE_ASEPRITE_ASSERT((zlib_byte0 & 0xF0) <= 0x70); // Innapropriate window size detected.
-					CUTE_ASEPRITE_ASSERT(!(zlib_byte1 & 0x20)); // Preset dictionary is present and not supported.
+					CUTE_ASEPRITE_CHECK((zlib_byte0 & 0x0F) == 0x08, "Only the zlib compression method (RFC 1950) is supported.");
+					CUTE_ASEPRITE_CHECK((zlib_byte0 & 0xF0) <= 0x70, "Inappropriate zlib window size detected.");
+					CUTE_ASEPRITE_CHECK(!(zlib_byte1 & 0x20), "A preset dictionary is present and is not supported.");
 					int pixels_sz = cel->w * cel->h * bpp;
 					void* pixels_decompressed = CUTE_ASEPRITE_ALLOC(pixels_sz, mem_ctx);
 					int ret = s_inflate(pixels, deflate_bytes, pixels_decompressed, pixels_sz, mem_ctx);
@@ -1130,7 +1223,7 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 			{
 				ase->tag_count = (int)s_read_uint16(s);
 				s_skip(s, 8); // For future (set to zero).
-				CUTE_ASEPRITE_ASSERT(ase->tag_count < CUTE_ASEPRITE_MAX_TAGS);
+				CUTE_ASEPRITE_CHECK(ase->tag_count < CUTE_ASEPRITE_MAX_TAGS, "Too many tags in .aseprite file.");
 				for (int k = 0; k < ase->tag_count; ++k) {
 					ase->tags[k].from_frame = (int)s_read_uint16(s);
 					ase->tags[k].to_frame = (int)s_read_uint16(s);
@@ -1149,7 +1242,7 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 			case 0x2019: // Palette chunk.
 			{
 				ase->palette.entry_count = (int)s_read_uint32(s);
-				CUTE_ASEPRITE_ASSERT(ase->palette.entry_count <= CUTE_ASEPRITE_MAX_PALETTE_ENTRIES);
+				CUTE_ASEPRITE_CHECK(ase->palette.entry_count <= CUTE_ASEPRITE_MAX_PALETTE_ENTRIES, "Too many palette entries in .aseprite file.");
 				int first_index = (int)s_read_uint32(s);
 				int last_index = (int)s_read_uint32(s);
 				s_skip(s, 8); // For future (set to zero).
@@ -1165,16 +1258,16 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 					} else {
 						entry.color_name = NULL;
 					}
-					CUTE_ASEPRITE_ASSERT(k < CUTE_ASEPRITE_MAX_PALETTE_ENTRIES);
+					CUTE_ASEPRITE_CHECK(k < CUTE_ASEPRITE_MAX_PALETTE_ENTRIES, "Palette entry index is out of range.");
 					ase->palette.entries[k] = entry;
 				}
 			}	break;
 
 			case 0x2020: // Udata chunk.
 			{
-				CUTE_ASEPRITE_ASSERT(last_udata || was_on_tags);
+				CUTE_ASEPRITE_CHECK(last_udata || was_on_tags, "User data chunk with nothing to attach it to.");
 				if (was_on_tags && !last_udata) {
-					CUTE_ASEPRITE_ASSERT(tag_index < ase->tag_count);
+					CUTE_ASEPRITE_CHECK(tag_index < ase->tag_count, "User data chunk refers to a tag that does not exist.");
 					last_udata = &ase->tags[tag_index++].udata;
 				}
 				int flags = (int)s_read_uint32(s);
@@ -1220,7 +1313,7 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 						slice.pivot_x = (int)s_read_int32(s);
 						slice.pivot_y = (int)s_read_int32(s);
 					}
-					CUTE_ASEPRITE_ASSERT(ase->slice_count < CUTE_ASEPRITE_MAX_SLICES);
+					CUTE_ASEPRITE_CHECK(ase->slice_count < CUTE_ASEPRITE_MAX_SLICES, "Too many slices in .aseprite file.");
 					ase->slices[ase->slice_count++] = slice;
 					last_udata = &ase->slices[ase->slice_count - 1].udata;
 				}
@@ -1231,8 +1324,15 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 				break;
 			}
 
+			// pntr_aseprite LOCAL PATCH: a chunk that did not read its declared size
+			// means the file ran out partway through it, or declared a size that does
+			// not match its contents. Asserting that only caught it in debug builds and
+			// let a release build carry on with a desynchronised read position, so fail
+			// the load instead. Checking s->error first gives the truncation its own
+			// message rather than reporting it as a size mismatch.
+			CUTE_ASEPRITE_CHECK(!s->error, CUTE_ASEPRITE_TRUNCATED);
 			uint32_t size_read = (uint32_t)(s->in - chunk_start);
-			CUTE_ASEPRITE_ASSERT(size_read == chunk_size);
+			CUTE_ASEPRITE_CHECK(size_read == chunk_size, "Chunk size does not match the data read from it.");
 		}
 	}
 
@@ -1260,7 +1360,7 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 						break;
 					}
 				}
-				CUTE_ASEPRITE_ASSERT(found);
+				CUTE_ASEPRITE_CHECK(found, "Cel refers to a layer that does not exist.");
 			}
 			void* src = cel->pixels;
 			uint8_t opacity = (uint8_t)(cel->opacity * cel->layer->opacity * 255.0f);
@@ -1289,11 +1389,30 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 
 	ase->mem_ctx = mem_ctx;
 	return ase;
+
+// pntr_aseprite LOCAL PATCH: the error path CUTE_ASEPRITE_CHECK() unwinds to. This
+// function used to assert its way through a malformed file and had no way to fail, so
+// the label the macro jumps to did not exist here at all.
+//
+// cute_aseprite_free() releases by the counts held on `ase`, and those only grow as each
+// piece is successfully parsed, so a partially built sprite tears down correctly. It
+// reads ase->mem_ctx, which is otherwise only assigned on the success path above, so set
+// it before handing the sprite over. CUTE_ASEPRITE_WARNING() surfaces the reason through
+// pntr_aseprite's warning hook, which is a no-op unless the embedder set one.
+ase_err:
+	CUTE_ASEPRITE_WARNING(s_error_reason);
+	ase->mem_ctx = mem_ctx;
+	cute_aseprite_free(ase);
+	return NULL;
 }
 
 void cute_aseprite_free(ase_t* ase)
 {
-	for (int i = 0; i < ase->frame_count; ++i) {
+	// pntr_aseprite LOCAL PATCH: frame_count is read from the file header before the
+	// frames array is allocated, so a load that fails in between leaves a non-zero count
+	// with no array to walk. Only `frames` is heap allocated; every other count below
+	// indexes an array held inside `ase` itself.
+	for (int i = 0; ase->frames != NULL && i < ase->frame_count; ++i) {
 		ase_frame_t* frame = ase->frames + i;
 		CUTE_ASEPRITE_FREE(frame->pixels, ase->mem_ctx);
 		for (int j = 0; j < frame->cel_count; ++j) {

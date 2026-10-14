@@ -30,6 +30,51 @@ void test_load_failures() {
     // A header-only file that parses, but carries no frames, so it is rejected after
     // cute_aseprite has already allocated for it.
     PNTR_ASSERT(pntr_load_aseprite("resources/zero_frames.aseprite") == NULL);
+
+    // Data that is not an .aseprite file at all. Before the parser bounds checked its
+    // reads this walked off the end of the buffer instead of being rejected.
+    unsigned char garbage[256];
+    for (int i = 0; i < (int)sizeof(garbage); i++) {
+        garbage[i] = (unsigned char)(i * 7 + 3);
+    }
+    PNTR_ASSERT(pntr_load_aseprite_from_memory(garbage, (unsigned int)sizeof(garbage)) == NULL);
+
+    // A real .aseprite file cut short. Truncating to 64 bytes does not even reach the
+    // end of the 128-byte header.
+    unsigned int georgeSize = 0;
+    unsigned char* george = pntr_load_file("resources/george.aseprite", &georgeSize);
+    PNTR_ASSERT(george);
+    PNTR_ASSERT(georgeSize > 128);
+    PNTR_ASSERT(pntr_load_aseprite_from_memory(george, 64) == NULL);
+
+    // Truncation at any length has to be rejected or loaded, never crash and never
+    // leak. Walking the whole file catches the cases a couple of hand-picked lengths
+    // would miss, in particular truncation partway through the frame and chunk loops.
+    int loaded = 0;
+    int rejected = 0;
+    for (unsigned int length = 1; length < georgeSize; length += 97) {
+        pntr_aseprite* partial = pntr_load_aseprite_from_memory(george, length);
+        if (partial == NULL) {
+            rejected++;
+        }
+        else {
+            // Anything that does load has to be coherent enough to use.
+            PNTR_ASSERT(pntr_aseprite_image(partial) != NULL);
+            PNTR_ASSERT(pntr_aseprite_width(partial) > 0);
+            PNTR_ASSERT(pntr_aseprite_height(partial) > 0);
+            pntr_unload_aseprite(partial);
+            loaded++;
+        }
+    }
+    PNTR_ASSERT(rejected > 0);
+    printf("truncation sweep: %d rejected, %d loaded, 0 crashes\n", rejected, loaded);
+
+    // The untruncated file still loads, so the guards above reject only bad input.
+    pntr_aseprite* whole = pntr_load_aseprite_from_memory(george, georgeSize);
+    PNTR_ASSERT(whole);
+    pntr_unload_aseprite(whole);
+
+    pntr_unload_file(george);
 }
 
 /**
@@ -109,8 +154,16 @@ void test_rgba_mode_keeps_palette_colored_pixels() {
  * Multiply (3) instead of Normal (0).
  */
 void test_blend_mode_warning() {
-    // Everything loaded so far uses Normal, so nothing should have warned yet.
+    // A rejected load now reports its reason through this same hook, and the truncation
+    // sweep in test_load_failures() deliberately causes a great many of them, so start
+    // from a known count rather than assuming nothing has warned yet.
+    warningCount = 0;
+
+    // A file using only the Normal blend mode must still not warn.
+    pntr_aseprite* normal = pntr_load_aseprite("resources/rgba_palette.aseprite");
+    PNTR_ASSERT(normal);
     PNTR_ASSERT_EQUALS(warningCount, 0);
+    pntr_unload_aseprite(normal);
 
     pntr_aseprite* aseprite = pntr_load_aseprite("resources/multiply.aseprite");
     PNTR_ASSERT(aseprite);

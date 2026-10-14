@@ -292,6 +292,14 @@ PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite_from_memory(unsigned char* f
         return NULL;
     }
 
+    // Reject data that cannot be an .aseprite file before handing it to the parser. The
+    // header is 128 bytes, and bytes 4 and 5 hold the magic 0xA5E0, little endian. This
+    // is defence in depth rather than the real guard: the parser bounds checks its own
+    // reads, and only it can catch a file that is truncated past the header.
+    if (size < 128 || fileData[4] != 0xE0 || fileData[5] != 0xA5) {
+        return pntr_set_error(PNTR_ERROR_INVALID_DATA);
+    }
+
     pntr_aseprite* aseprite = pntr_load_memory(sizeof(pntr_aseprite));
     if (aseprite == NULL) {
         return NULL;
