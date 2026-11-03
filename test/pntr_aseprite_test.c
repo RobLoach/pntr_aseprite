@@ -28,7 +28,7 @@ void test_load_failures() {
     PNTR_ASSERT(pntr_load_aseprite_from_memory(NULL, 128) == NULL);
 
     // A header-only file that parses, but carries no frames, so it is rejected after
-    // cute_aseprite has already allocated for it.
+    // cute_aseprite has already allocated for it. See tools/generate_fixtures.py.
     PNTR_ASSERT(pntr_load_aseprite("resources/zero_frames.aseprite") == NULL);
 }
 
@@ -79,12 +79,7 @@ void test_tag_frame_without_tag() {
  * An RGBA sprite that happens to carry a palette must keep every opaque pixel, even
  * one whose color is identical to the transparent palette entry.
  *
- * rgba_palette.aseprite is a hand-built 2x1 single-frame RGBA file holding one old
- * palette chunk (0x0004) whose only entry is an opaque rgb(10, 20, 30), a
- * transparent_palette_entry_index of 0, and one raw cel of two opaque pixels:
- * rgba(10, 20, 30, 255), which matches that palette entry, and rgba(200, 100, 50, 255),
- * which does not. The transparent palette entry is only meaningful for indexed
- * sprites, so neither pixel may be touched here.
+ * rgba_palette.aseprite is built by tools/generate_fixtures.py.
  */
 void test_rgba_mode_keeps_palette_colored_pixels() {
     pntr_aseprite* aseprite = pntr_load_aseprite("resources/rgba_palette.aseprite");
@@ -105,8 +100,7 @@ void test_rgba_mode_keeps_palette_colored_pixels() {
  * Only the Normal blend mode is composited, so the parser's complaint about any other
  * one must reach the configured PNTR_ASEPRITE_WARNING() handler rather than be dropped.
  *
- * multiply.aseprite is rgba_palette.aseprite with its layer's blend mode set to
- * Multiply (3) instead of Normal (0).
+ * multiply.aseprite is built by tools/generate_fixtures.py.
  */
 void test_blend_mode_warning() {
     // Everything loaded so far uses Normal, so nothing should have warned yet.
