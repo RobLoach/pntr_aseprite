@@ -497,63 +497,64 @@ PNTR_ASEPRITE_API void pntr_aseprite_update_tag(pntr_aseprite_tag* tag, float de
     ase_t* ase = tag->aseprite->ase;
     ase_tag_t* aseTag = tag->tag;
 
-    // Count down the timer and see if it's time to update the frame.
+    // Count down the timer, advancing as many frames as the elapsed time covers.
     tag->timer -= delta_time * tag->speed;
-    if (tag->timer > 0) {
-        return;
-    }
 
-    // Advance the frame and see if it's time to reset the position.
-    tag->currentFrame += tag->direction;
-    switch (aseTag->loop_animation_direction) {
-        case ASE_ANIMATION_DIRECTION_BACKWORDS:
-            if (tag->currentFrame < aseTag->from_frame) {
-                if (tag->loop) {
-                    tag->currentFrame = aseTag->to_frame;
-                } else {
-                    tag->currentFrame = aseTag->from_frame;
-                    tag->paused = true;
-                }
-            }
-        break;
-        case ASE_ANIMATION_DIRECTION_PINGPONG:
-            if (tag->direction > 0) {
-                if (tag->currentFrame > aseTag->to_frame) {
-                    tag->direction = -1;
-                    if (tag->loop) {
-                        tag->currentFrame = aseTag->to_frame - 1;
-                    } else {
-                        tag->currentFrame = aseTag->to_frame;
-                        tag->paused = true;
-                    }
-                }
-            } else {
+    // Advance at most one full cycle, in case the frames have no duration.
+    int steps = (aseTag->to_frame - aseTag->from_frame + 1) * 2;
+    while (tag->timer <= 0 && !tag->paused && steps-- > 0) {
+        // Advance the frame and see if it's time to reset the position.
+        tag->currentFrame += tag->direction;
+        switch (aseTag->loop_animation_direction) {
+            case ASE_ANIMATION_DIRECTION_BACKWORDS:
                 if (tag->currentFrame < aseTag->from_frame) {
-                    tag->direction = 1;
                     if (tag->loop) {
-                        tag->currentFrame = aseTag->from_frame + 1;
+                        tag->currentFrame = aseTag->to_frame;
                     } else {
                         tag->currentFrame = aseTag->from_frame;
                         tag->paused = true;
                     }
                 }
-            }
-        break;
-        case ASE_ANIMATION_DIRECTION_FORWARDS:
-        default:
-            if (tag->currentFrame > aseTag->to_frame) {
-                if (tag->loop) {
-                    tag->currentFrame = aseTag->from_frame;
+            break;
+            case ASE_ANIMATION_DIRECTION_PINGPONG:
+                if (tag->direction > 0) {
+                    if (tag->currentFrame > aseTag->to_frame) {
+                        tag->direction = -1;
+                        if (tag->loop) {
+                            tag->currentFrame = aseTag->to_frame - 1;
+                        } else {
+                            tag->currentFrame = aseTag->to_frame;
+                            tag->paused = true;
+                        }
+                    }
                 } else {
-                    tag->currentFrame = aseTag->to_frame;
-                    tag->paused = true;
+                    if (tag->currentFrame < aseTag->from_frame) {
+                        tag->direction = 1;
+                        if (tag->loop) {
+                            tag->currentFrame = aseTag->from_frame + 1;
+                        } else {
+                            tag->currentFrame = aseTag->from_frame;
+                            tag->paused = true;
+                        }
+                    }
                 }
-            }
-        break;
-    }
+            break;
+            case ASE_ANIMATION_DIRECTION_FORWARDS:
+            default:
+                if (tag->currentFrame > aseTag->to_frame) {
+                    if (tag->loop) {
+                        tag->currentFrame = aseTag->from_frame;
+                    } else {
+                        tag->currentFrame = aseTag->to_frame;
+                        tag->paused = true;
+                    }
+                }
+            break;
+        }
 
-    // Reset the timer, considering the offset of the animation.
-    tag->timer += (float)(ase->frames[tag->currentFrame].duration_milliseconds) / 1000.0f;
+        // Reset the timer, considering the offset of the animation.
+        tag->timer += (float)(ase->frames[tag->currentFrame].duration_milliseconds) / 1000.0f;
+    }
 }
 
 // Frame numbers below are relative to the tag's own frame range, counted from

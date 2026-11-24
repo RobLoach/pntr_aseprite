@@ -57,6 +57,26 @@ void test_update_tag(pntr_aseprite* aseprite) {
 }
 
 /**
+ * A single step spanning several frame durations must advance every one of them.
+ */
+void test_update_tag_catches_up(pntr_aseprite* aseprite) {
+    pntr_aseprite_tag* tag = pntr_load_aseprite_tag(aseprite, "Walk-Down");
+    PNTR_ASSERT(tag);
+    PNTR_ASSERT_EQUALS(tag->currentFrame, 1);
+    PNTR_ASSERT(tag->tag->to_frame >= 3);
+
+    // Two whole frame durations plus a bit of the third.
+    float first = (float)aseprite->ase->frames[1].duration_milliseconds / 1000.0f;
+    float second = (float)aseprite->ase->frames[2].duration_milliseconds / 1000.0f;
+    float third = (float)aseprite->ase->frames[3].duration_milliseconds / 1000.0f;
+    pntr_aseprite_update_tag(tag, first + second + third / 4.0f);
+    PNTR_ASSERT_EQUALS(tag->currentFrame, 3);
+    PNTR_ASSERT_EQUALS(pntr_aseprite_get_tag_frame(tag), 2);
+
+    pntr_unload_aseprite_tag(tag);
+}
+
+/**
  * The frame accessors must tolerate a tag that has no ase_tag_t behind it, which is
  * exactly what pntr_load_aseprite_tag_default() hands out.
  */
@@ -124,6 +144,7 @@ int main() {
     PNTR_ASSERT(aseprite);
 
     test_update_tag(aseprite);
+    test_update_tag_catches_up(aseprite);
 
     pntr_image* output = pntr_gen_image_color(100, 100, PNTR_WHITE);
     PNTR_ASSERT(output);
