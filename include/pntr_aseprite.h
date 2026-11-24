@@ -58,6 +58,7 @@ typedef struct pntr_aseprite_tag {
     float speed;        // The animation speed factor (1 is normal speed, 2 is double speed)
     pntr_color color;   // The color provided for the tag
     bool loop;          // Whether to continue to play the animation when the animation finishes
+    int repeat;         // Passes left to play when not looping (each ping-pong direction is one pass)
     bool paused;        // Set to true to not progression of the animation
     pntr_aseprite* aseprite;  // The loaded Aseprite file
     struct ase_tag_t* tag;     // The active tag to act upon
@@ -519,6 +520,21 @@ PNTR_ASEPRITE_API float pntr_aseprite_frame_duration(pntr_aseprite* aseprite, in
     return (float)(aseprite->ase->frames[frame].duration_milliseconds) / 1000.0f;
 }
 
+/**
+ * Called when the tag finishes a pass through its animation. Pauses the tag if it is not
+ * looping and has no repeats left.
+ *
+ * @return True if the animation should play another pass.
+ */
+static bool pntr_aseprite_tag_next_cycle(pntr_aseprite_tag* tag) {
+    if (tag->loop || --tag->repeat > 0) {
+        return true;
+    }
+
+    tag->paused = true;
+    return false;
+}
+
 PNTR_ASEPRITE_API void pntr_aseprite_update_tag(pntr_aseprite_tag* tag, float delta_time) {
     if (tag == NULL || tag->tag == NULL || tag->aseprite == NULL) {
         return;
@@ -540,48 +556,35 @@ PNTR_ASEPRITE_API void pntr_aseprite_update_tag(pntr_aseprite_tag* tag, float de
     while (tag->timer <= 0 && !tag->paused && steps-- > 0) {
         // Advance the frame and see if it's time to reset the position.
         tag->currentFrame += tag->direction;
-        switch (aseTag->loop_animation_direction) {
+        switch ((int)aseTag->loop_animation_direction) {
             case ASE_ANIMATION_DIRECTION_BACKWORDS:
                 if (tag->currentFrame < aseTag->from_frame) {
-                    if (tag->loop) {
+                    if (pntr_aseprite_tag_next_cycle(tag)) {
                         tag->currentFrame = aseTag->to_frame;
                     } else {
                         tag->currentFrame = aseTag->from_frame;
-                        tag->paused = true;
                     }
                 }
             break;
             case ASE_ANIMATION_DIRECTION_PINGPONG:
-                if (tag->direction > 0) {
-                    if (tag->currentFrame > aseTag->to_frame) {
-                        tag->direction = -1;
-                        if (tag->loop) {
-                            tag->currentFrame = aseTag->to_frame - 1;
-                        } else {
-                            tag->currentFrame = aseTag->to_frame;
-                            tag->paused = true;
-                        }
-                    }
-                } else {
-                    if (tag->currentFrame < aseTag->from_frame) {
-                        tag->direction = 1;
-                        if (tag->loop) {
-                            tag->currentFrame = aseTag->from_frame + 1;
-                        } else {
-                            tag->currentFrame = aseTag->from_frame;
-                            tag->paused = true;
-                        }
+            case 3: // Ping-pong reverse, which cute_aseprite passes through as-is.
+                if (tag->currentFrame > aseTag->to_frame || tag->currentFrame < aseTag->from_frame) {
+                    // Step back onto the end that was passed, and turn around. As in
+                    // Aseprite, each pass in one direction counts as one repeat.
+                    tag->currentFrame -= tag->direction;
+                    tag->direction = -tag->direction;
+                    if (pntr_aseprite_tag_next_cycle(tag)) {
+                        tag->currentFrame += tag->direction;
                     }
                 }
             break;
             case ASE_ANIMATION_DIRECTION_FORWARDS:
             default:
                 if (tag->currentFrame > aseTag->to_frame) {
-                    if (tag->loop) {
+                    if (pntr_aseprite_tag_next_cycle(tag)) {
                         tag->currentFrame = aseTag->from_frame;
                     } else {
                         tag->currentFrame = aseTag->to_frame;
-                        tag->paused = true;
                     }
                 }
             break;
@@ -646,6 +649,7 @@ PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag_default() {
     tag->speed = 1.0f;
     tag->color = PNTR_BLACK;
     tag->loop = true;
+    tag->repeat = 0;
     tag->paused = false;
     tag->name = 0;
     return tag;
@@ -679,10 +683,14 @@ PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag_index(pntr_aseprite*
     // Set up the frame range
     tag->direction = 1;
     tag->currentFrame = tag->tag->from_frame;
-    if (tag->tag->loop_animation_direction == ASE_ANIMATION_DIRECTION_BACKWORDS) {
+    if (tag->tag->loop_animation_direction == ASE_ANIMATION_DIRECTION_BACKWORDS || (int)tag->tag->loop_animation_direction == 3) {
         tag->currentFrame = tag->tag->to_frame;
         tag->direction = -1;
     }
+
+    // A repeat count of 0 loops forever, otherwise the tag plays that many times.
+    tag->repeat = tag->tag->repeat;
+    tag->loop = tag->repeat == 0;
 
     // Pause the animation if it's a one-frame tag
     if (tag->tag->from_frame == tag->tag->to_frame) {

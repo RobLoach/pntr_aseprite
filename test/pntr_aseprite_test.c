@@ -96,6 +96,96 @@ void test_frame_count_and_duration(pntr_aseprite* aseprite) {
 }
 
 /**
+ * Steps the tag through each of the given frames, one frame duration at a time.
+ */
+void assert_tag_frames(pntr_aseprite_tag* tag, const int* frames, int count) {
+    for (int i = 0; i < count; i++) {
+        PNTR_ASSERT_EQUALS(tag->currentFrame, frames[i]);
+        pntr_aseprite_update_tag(tag, (float)tag->aseprite->ase->frames[tag->currentFrame].duration_milliseconds / 1000.0f);
+    }
+}
+
+/**
+ * The tag's repeat count decides whether it loops, and how many times it plays.
+ */
+void test_update_tag_repeat(pntr_aseprite* aseprite) {
+    // Walk-Down is a ping-pong tag over frames 1 to 3, set to loop forever.
+    pntr_aseprite_tag* tag = pntr_load_aseprite_tag(aseprite, "Walk-Down");
+    PNTR_ASSERT(tag);
+    PNTR_ASSERT_EQUALS(tag->tag->loop_animation_direction, ASE_ANIMATION_DIRECTION_PINGPONG);
+    PNTR_ASSERT_EQUALS(tag->tag->repeat, 0);
+    PNTR_ASSERT(tag->loop);
+
+    // Looping ping-pong keeps bouncing between the ends.
+    const int looping[] = {1, 2, 3, 2, 1, 2, 3, 2, 1};
+    assert_tag_frames(tag, looping, 9);
+    PNTR_ASSERT(!tag->paused);
+    pntr_unload_aseprite_tag(tag);
+
+    // Without looping, ping-pong plays a single pass, and stops at the far end.
+    tag = pntr_load_aseprite_tag(aseprite, "Walk-Down");
+    tag->loop = false;
+    const int pingpong[] = {1, 2, 3, 3, 3};
+    assert_tag_frames(tag, pingpong, 5);
+    PNTR_ASSERT(tag->paused);
+    pntr_unload_aseprite_tag(tag);
+
+    // Ping-pong reverse starts at the end, and its single pass goes back to the start.
+    aseprite->ase->tags[1].loop_animation_direction = (ase_animation_direction_t)3;
+    tag = pntr_load_aseprite_tag(aseprite, "Walk-Down");
+    tag->loop = false;
+    const int pingpongReverse[] = {3, 2, 1, 1};
+    assert_tag_frames(tag, pingpongReverse, 4);
+    PNTR_ASSERT(tag->paused);
+    pntr_unload_aseprite_tag(tag);
+
+    // Forward without looping stops on the last frame.
+    aseprite->ase->tags[1].loop_animation_direction = ASE_ANIMATION_DIRECTION_FORWARDS;
+    tag = pntr_load_aseprite_tag(aseprite, "Walk-Down");
+    tag->loop = false;
+    const int forward[] = {1, 2, 3, 3, 3};
+    assert_tag_frames(tag, forward, 5);
+    PNTR_ASSERT(tag->paused);
+    pntr_unload_aseprite_tag(tag);
+
+    // A repeat count of 2 turns looping off, and plays the tag twice.
+    aseprite->ase->tags[1].repeat = 2;
+    tag = pntr_load_aseprite_tag(aseprite, "Walk-Down");
+    PNTR_ASSERT(!tag->loop);
+    PNTR_ASSERT_EQUALS(tag->repeat, 2);
+    const int repeated[] = {1, 2, 3, 1, 2, 3, 3};
+    assert_tag_frames(tag, repeated, 7);
+    PNTR_ASSERT(tag->paused);
+
+    // Turning looping back on overrides the repeat count.
+    tag->loop = true;
+    tag->paused = false;
+    const int resumed[] = {3, 1, 2, 3, 1};
+    assert_tag_frames(tag, resumed, 5);
+    PNTR_ASSERT(!tag->paused);
+    pntr_unload_aseprite_tag(tag);
+
+    // Each ping-pong direction is one repeat, so twice goes forward then back.
+    aseprite->ase->tags[1].loop_animation_direction = ASE_ANIMATION_DIRECTION_PINGPONG;
+    tag = pntr_load_aseprite_tag(aseprite, "Walk-Down");
+    const int pingpongTwice[] = {1, 2, 3, 2, 1, 1};
+    assert_tag_frames(tag, pingpongTwice, 6);
+    PNTR_ASSERT(tag->paused);
+    pntr_unload_aseprite_tag(tag);
+
+    // And three times goes forward, back, and forward again.
+    aseprite->ase->tags[1].repeat = 3;
+    tag = pntr_load_aseprite_tag(aseprite, "Walk-Down");
+    const int pingpongThrice[] = {1, 2, 3, 2, 1, 2, 3, 3};
+    assert_tag_frames(tag, pingpongThrice, 8);
+    PNTR_ASSERT(tag->paused);
+    pntr_unload_aseprite_tag(tag);
+
+    // Restore the tag for the other tests.
+    aseprite->ase->tags[1].repeat = 0;
+}
+
+/**
  * The frame accessors must tolerate a tag that has no ase_tag_t behind it, which is
  * exactly what pntr_load_aseprite_tag_default() hands out.
  */
@@ -165,6 +255,7 @@ int main() {
     test_update_tag(aseprite);
     test_update_tag_catches_up(aseprite);
     test_frame_count_and_duration(aseprite);
+    test_update_tag_repeat(aseprite);
 
     pntr_image* output = pntr_gen_image_color(100, 100, PNTR_WHITE);
     PNTR_ASSERT(output);
