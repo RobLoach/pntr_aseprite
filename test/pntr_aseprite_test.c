@@ -77,6 +77,25 @@ void test_update_tag_catches_up(pntr_aseprite* aseprite) {
 }
 
 /**
+ * The frame count and duration accessors must report the parsed values, and 0 for
+ * anything out of range.
+ */
+void test_frame_count_and_duration(pntr_aseprite* aseprite) {
+    int count = pntr_aseprite_frame_count(aseprite);
+    PNTR_ASSERT(count > 0);
+    PNTR_ASSERT_EQUALS(count, aseprite->ase->frame_count);
+    PNTR_ASSERT_EQUALS(pntr_aseprite_frame_count(NULL), 0);
+
+    float expected = (float)aseprite->ase->frames[0].duration_milliseconds / 1000.0f;
+    PNTR_ASSERT(pntr_aseprite_frame_duration(aseprite, 0) == expected);
+    PNTR_ASSERT(pntr_aseprite_frame_duration(aseprite, 0) > 0.0f);
+
+    PNTR_ASSERT(pntr_aseprite_frame_duration(NULL, 0) == 0.0f);
+    PNTR_ASSERT(pntr_aseprite_frame_duration(aseprite, -1) == 0.0f);
+    PNTR_ASSERT(pntr_aseprite_frame_duration(aseprite, count) == 0.0f);
+}
+
+/**
  * The frame accessors must tolerate a tag that has no ase_tag_t behind it, which is
  * exactly what pntr_load_aseprite_tag_default() hands out.
  */
@@ -145,6 +164,7 @@ int main() {
 
     test_update_tag(aseprite);
     test_update_tag_catches_up(aseprite);
+    test_frame_count_and_duration(aseprite);
 
     pntr_image* output = pntr_gen_image_color(100, 100, PNTR_WHITE);
     PNTR_ASSERT(output);

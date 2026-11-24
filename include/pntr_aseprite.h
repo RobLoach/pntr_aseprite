@@ -158,6 +158,25 @@ PNTR_ASEPRITE_API void pntr_draw_aseprite(pntr_image* dst, pntr_aseprite* asepri
 PNTR_ASEPRITE_API pntr_image pntr_aseprite_frame(pntr_aseprite* aseprite, int frame);
 
 /**
+ * Get the number of frames in the aseprite.
+ *
+ * @param aseprite The aseprite object.
+ *
+ * @return The number of frames, or 0 on failure.
+ */
+PNTR_ASEPRITE_API int pntr_aseprite_frame_count(pntr_aseprite* aseprite);
+
+/**
+ * Get how long the given frame is displayed for.
+ *
+ * @param aseprite The aseprite object.
+ * @param frame The index of the frame.
+ *
+ * @return The duration of the frame in seconds, or 0 on failure or an out of range frame.
+ */
+PNTR_ASEPRITE_API float pntr_aseprite_frame_duration(pntr_aseprite* aseprite, int frame);
+
+/**
  * Load a pntr_aseprite tag from the given name.
  *
  * @param aseprite The pntr_aseprite object to load the tag from.
@@ -482,6 +501,22 @@ PNTR_ASEPRITE_API pntr_image pntr_aseprite_frame(pntr_aseprite* aseprite, int fr
             .height = aseprite->ase->h
         }
     };
+}
+
+PNTR_ASEPRITE_API int pntr_aseprite_frame_count(pntr_aseprite* aseprite) {
+    if (aseprite == NULL || aseprite->ase == NULL) {
+        return 0;
+    }
+
+    return aseprite->ase->frame_count;
+}
+
+PNTR_ASEPRITE_API float pntr_aseprite_frame_duration(pntr_aseprite* aseprite, int frame) {
+    if (aseprite == NULL || aseprite->ase == NULL || frame < 0 || frame >= aseprite->ase->frame_count) {
+        return 0.0f;
+    }
+
+    return (float)(aseprite->ase->frames[frame].duration_milliseconds) / 1000.0f;
 }
 
 PNTR_ASEPRITE_API void pntr_aseprite_update_tag(pntr_aseprite_tag* tag, float delta_time) {
