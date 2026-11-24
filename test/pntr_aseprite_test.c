@@ -205,6 +205,46 @@ void test_tag_frame_without_tag() {
 }
 
 /**
+ * Setting a tag's frame counts from the start of the tag, or from its end when
+ * negative, clamps to the tag, and restarts the timer for the new frame.
+ */
+void test_set_tag_frame(pntr_aseprite* aseprite) {
+    // Walk-Down covers frames 1 to 3.
+    pntr_aseprite_tag* tag = pntr_load_aseprite_tag(aseprite, "Walk-Down");
+    PNTR_ASSERT(tag);
+    int from = tag->tag->from_frame;
+    int to = tag->tag->to_frame;
+    PNTR_ASSERT_EQUALS(from, 1);
+    PNTR_ASSERT_EQUALS(to, 3);
+
+    // Non-negative values round-trip.
+    for (int i = 0; i <= to - from; i++) {
+        pntr_aseprite_set_tag_frame(tag, i);
+        PNTR_ASSERT_EQUALS(tag->currentFrame, from + i);
+        PNTR_ASSERT_EQUALS(pntr_aseprite_get_tag_frame(tag), i);
+    }
+
+    // Negative values count from the end.
+    pntr_aseprite_set_tag_frame(tag, -1);
+    PNTR_ASSERT_EQUALS(tag->currentFrame, to);
+    pntr_aseprite_set_tag_frame(tag, -2);
+    PNTR_ASSERT_EQUALS(tag->currentFrame, to - 1);
+
+    // Out of range values clamp.
+    pntr_aseprite_set_tag_frame(tag, 100);
+    PNTR_ASSERT_EQUALS(tag->currentFrame, to);
+    pntr_aseprite_set_tag_frame(tag, -100);
+    PNTR_ASSERT_EQUALS(tag->currentFrame, from);
+
+    // The timer restarts with the new frame's duration.
+    pntr_aseprite_update_tag(tag, 0.01f);
+    pntr_aseprite_set_tag_frame(tag, 1);
+    PNTR_ASSERT(tag->timer == (float)aseprite->ase->frames[from + 1].duration_milliseconds / 1000.0f);
+
+    pntr_unload_aseprite_tag(tag);
+}
+
+/**
  * An RGBA sprite that happens to carry a palette must keep every opaque pixel, even
  * one whose color is identical to the transparent palette entry.
  *
@@ -256,6 +296,7 @@ int main() {
     test_update_tag_catches_up(aseprite);
     test_frame_count_and_duration(aseprite);
     test_update_tag_repeat(aseprite);
+    test_set_tag_frame(aseprite);
 
     pntr_image* output = pntr_gen_image_color(100, 100, PNTR_WHITE);
     PNTR_ASSERT(output);
