@@ -46,8 +46,8 @@
  * The main Aseprite object that contains the loaded Aseprite file.
  */
 typedef struct pntr_aseprite {
-    struct ase_t* ase; /** The cute_aseprite object */
-    pntr_image* image; /** The aseprite image data */
+    struct ase_t* ase; /**< The cute_aseprite object */
+    pntr_image* image; /**< The aseprite image data */
 } pntr_aseprite;
 
 typedef struct pntr_aseprite_tag {
@@ -75,22 +75,25 @@ extern "C" {
 #endif
 
 /**
- * Load an .aseprite file through its memory data.
+ * Load an .aseprite file.
  *
- * @param fileData The loaded file data for the .aseprite file.
- * @param size The size of file in bytes.
+ * @param fileName The path to the file to load.
  *
  * @return The loaded aseprite object, or NULL on failure.
+ *
+ * @see pntr_unload_aseprite()
  */
 PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite(const char* fileName);
 
 /**
- * Load an .aseprite file.
+ * Load an .aseprite file through its memory data.
  *
- * @param fileName The path to the file to load.
- * @param size The size of the memory in bytes.
+ * @param fileData The loaded file data for the .aseprite file. It is not kept, so it may be freed afterwards.
+ * @param size The size of the file data in bytes.
  *
  * @return The loaded aseprite object, or NULL on failure.
+ *
+ * @see pntr_unload_aseprite()
  */
 PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite_from_memory(unsigned char* fileData, unsigned int size);
 
@@ -113,53 +116,80 @@ PNTR_ASEPRITE_API void pntr_unload_aseprite(pntr_aseprite* aseprite);
 PNTR_ASEPRITE_API pntr_image* pntr_aseprite_image(pntr_aseprite* aseprite);
 
 /**
- * Get the width of the aseprite.
+ * Get the width of a single frame of the aseprite.
  *
- * @return The width of the aseprite.
+ * @param aseprite The aseprite object.
+ *
+ * @return The width of the aseprite, or 0 on failure.
  */
 PNTR_ASEPRITE_API int pntr_aseprite_width(pntr_aseprite* aseprite);
 
 /**
  * Get the height of the aseprite.
  *
- * @return The width of the aseprite.
+ * @param aseprite The aseprite object.
+ *
+ * @return The height of the aseprite, or 0 on failure.
  */
 PNTR_ASEPRITE_API int pntr_aseprite_height(pntr_aseprite* aseprite);
 
 /**
- * Draws a aseprite frame onto the screen.
+ * Draws an aseprite frame onto the given image.
+ *
+ * @param dst The image to draw onto.
+ * @param aseprite The aseprite object to draw from.
+ * @param frame The index of the frame to draw. Out of range frames are not drawn.
+ * @param posX The x position to draw at.
+ * @param posY The y position to draw at.
  */
 PNTR_ASEPRITE_API void pntr_draw_aseprite(pntr_image* dst, pntr_aseprite* aseprite, int frame, int posX, int posY);
 
 /**
  * Retrieves a pntr_image for the given aseprite frame.
+ *
+ * The returned image is a subimage that references the aseprite's own pixel data. It is
+ * owned by the aseprite, must not be unloaded, and is only valid until the aseprite is.
+ *
+ * @param aseprite The aseprite object to get the frame from.
+ * @param frame The index of the frame.
+ *
+ * @return The frame's image, or an empty image (with NULL data) on failure.
  */
 PNTR_ASEPRITE_API pntr_image pntr_aseprite_frame(pntr_aseprite* aseprite, int frame);
 
 /**
- * Load an pntr_aseprite tag from the given name.
+ * Load a pntr_aseprite tag from the given name.
  *
  * @param aseprite The pntr_aseprite object to load the tag from.
  * @param name The name of the tag to be loaded.
  *
- * @return The loaded pntr_aseprite tag, or an empty tag on failure.
+ * @return The loaded pntr_aseprite tag, or NULL on failure.
  *
- * @see Ispntr_aseprite_tagReady()
- * @see Updatepntr_aseprite_tag()
+ * @see pntr_aseprite_update_tag()
+ * @see pntr_unload_aseprite_tag()
  */
 PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag(pntr_aseprite* aseprite, const char* name);
 
 /**
- * Load an pntr_aseprite tag from the given index.
+ * Load a pntr_aseprite tag from the given index.
  *
- * @param aseprite The loaded pntr_aseprite object from which to load the tag->
+ * @param aseprite The loaded pntr_aseprite object from which to load the tag.
  * @param index The tag index within the pntr_aseprite object.
  *
- * @return The pntr_aseprite tag information, or an empty tag on failure.
+ * @return The pntr_aseprite tag information, or NULL on failure.
  *
  * @see pntr_load_aseprite_tag()
+ * @see pntr_aseprite_tag_count()
  */
 PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag_index(pntr_aseprite* aseprite, int index);
+
+/**
+ * Get the number of tags defined in the aseprite.
+ *
+ * @param aseprite The aseprite object.
+ *
+ * @return The number of tags, or 0 on failure.
+ */
 PNTR_ASEPRITE_API int pntr_aseprite_tag_count(pntr_aseprite* aseprite);
 
 /**
@@ -177,7 +207,22 @@ PNTR_ASEPRITE_API void pntr_aseprite_update_tag(pntr_aseprite_tag* tag, float de
  * @return An pntr_aseprite_tag with sane defaults.
  */
 PNTR_ASEPRITE_API pntr_aseprite_tag* pntr_load_aseprite_tag_default();
+
+/**
+ * Unloads the given tag. The aseprite it was loaded from is not unloaded.
+ *
+ * @param tag The tag to unload.
+ */
 PNTR_ASEPRITE_API void pntr_unload_aseprite_tag(pntr_aseprite_tag* tag);
+
+/**
+ * Draws the tag's current frame onto the given image.
+ *
+ * @param dst The image to draw onto.
+ * @param tag The tag to draw.
+ * @param posX The x position to draw at.
+ * @param posY The y position to draw at.
+ */
 PNTR_ASEPRITE_API void pntr_draw_aseprite_tag(pntr_image* dst, pntr_aseprite_tag* tag, int posX, int posY);
 
 /**
@@ -187,6 +232,14 @@ PNTR_ASEPRITE_API void pntr_draw_aseprite_tag(pntr_image* dst, pntr_aseprite_tag
  * @param frameNumber Which frame to set the active tag to. If negative, will start from the end.
  */
 PNTR_ASEPRITE_API void pntr_aseprite_set_tag_frame(pntr_aseprite_tag* tag, int frameNumber);
+
+/**
+ * Get which frame the pntr_aseprite tag is on, relative to the start of the tag.
+ *
+ * @param tag The pntr_aseprite tag.
+ *
+ * @return The tag's current frame, where 0 is its first frame, or -1 on failure.
+ */
 PNTR_ASEPRITE_API int pntr_aseprite_get_tag_frame(pntr_aseprite_tag* tag);
 
 // // pntr_aseprite_slice functions
