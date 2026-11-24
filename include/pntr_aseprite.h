@@ -246,10 +246,12 @@ PNTR_ASEPRITE_API void pntr_unload_aseprite_tag(pntr_aseprite_tag* tag);
 PNTR_ASEPRITE_API void pntr_draw_aseprite_tag(pntr_image* dst, pntr_aseprite_tag* tag, int posX, int posY);
 
 /**
- * Set which frame the pntr_aseprite tag is on.
+ * Set which frame the pntr_aseprite tag is on, and restart that frame's timer.
+ *
+ * Frame numbers are relative to the start of the tag, regardless of its animation direction.
  *
  * @param tag The pntr_aseprite tag to modify.
- * @param frameNumber Which frame to set the active tag to. If negative, will start from the end.
+ * @param frameNumber Which frame to set the active tag to, where 0 is its first frame. If negative, counts from the end, where -1 is its last frame. Out of range values are clamped.
  */
 PNTR_ASEPRITE_API void pntr_aseprite_set_tag_frame(pntr_aseprite_tag* tag, int frameNumber);
 
@@ -597,7 +599,6 @@ PNTR_ASEPRITE_API void pntr_aseprite_update_tag(pntr_aseprite_tag* tag, float de
 
 // Frame numbers below are relative to the tag's own frame range, counted from
 // from_frame regardless of which way the animation plays.
-// TODO: Need to attribute frame number for ASE_ANIMATION_DIRECTION_BACKWORDS?
 
 PNTR_ASEPRITE_API void pntr_aseprite_set_tag_frame(pntr_aseprite_tag* tag, int frameNumber) {
     if (tag == NULL || tag->tag == NULL) {
@@ -608,7 +609,7 @@ PNTR_ASEPRITE_API void pntr_aseprite_set_tag_frame(pntr_aseprite_tag* tag, int f
         tag->currentFrame = tag->tag->from_frame + frameNumber;
     }
     else {
-        tag->currentFrame = tag->tag->to_frame + frameNumber;
+        tag->currentFrame = tag->tag->to_frame + frameNumber + 1;
     }
 
     // Bounds
@@ -618,6 +619,9 @@ PNTR_ASEPRITE_API void pntr_aseprite_set_tag_frame(pntr_aseprite_tag* tag, int f
     else if (tag->currentFrame > tag->tag->to_frame) {
         tag->currentFrame = tag->tag->to_frame;
     }
+
+    // Show the new frame for its full duration.
+    tag->timer = (float)(tag->aseprite->ase->frames[tag->currentFrame].duration_milliseconds) / 1000.0f;
 }
 
 PNTR_ASEPRITE_API int pntr_aseprite_get_tag_frame(pntr_aseprite_tag* tag) {
