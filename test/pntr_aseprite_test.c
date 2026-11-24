@@ -186,6 +186,40 @@ void test_update_tag_repeat(pntr_aseprite* aseprite) {
 }
 
 /**
+ * Un-pausing a one-frame tag must keep it on its only frame, whatever its direction.
+ */
+void test_update_one_frame_tag(pntr_aseprite* aseprite) {
+    ase_tag_t* aseTag = &aseprite->ase->tags[1];
+    int toFrame = aseTag->to_frame;
+    ase_animation_direction_t direction = aseTag->loop_animation_direction;
+    aseTag->to_frame = aseTag->from_frame;
+
+    const int directions[] = {
+        ASE_ANIMATION_DIRECTION_PINGPONG,
+        3, // Ping-pong reverse
+        ASE_ANIMATION_DIRECTION_FORWARDS,
+        ASE_ANIMATION_DIRECTION_BACKWORDS
+    };
+    const int frames[] = {1, 1, 1, 1, 1};
+    for (int i = 0; i < 4; i++) {
+        for (int loop = 0; loop < 2; loop++) {
+            aseTag->loop_animation_direction = (ase_animation_direction_t)directions[i];
+            pntr_aseprite_tag* tag = pntr_load_aseprite_tag(aseprite, "Walk-Down");
+            PNTR_ASSERT(tag);
+            PNTR_ASSERT(tag->paused);
+            tag->loop = loop;
+            tag->paused = false;
+            assert_tag_frames(tag, frames, 5);
+            pntr_unload_aseprite_tag(tag);
+        }
+    }
+
+    // Restore the tag for the other tests.
+    aseTag->to_frame = toFrame;
+    aseTag->loop_animation_direction = direction;
+}
+
+/**
  * The frame accessors must tolerate a tag that has no ase_tag_t behind it, which is
  * exactly what pntr_load_aseprite_tag_default() hands out.
  */
@@ -296,6 +330,7 @@ int main() {
     test_update_tag_catches_up(aseprite);
     test_frame_count_and_duration(aseprite);
     test_update_tag_repeat(aseprite);
+    test_update_one_frame_tag(aseprite);
     test_set_tag_frame(aseprite);
 
     pntr_image* output = pntr_gen_image_color(100, 100, PNTR_WHITE);
