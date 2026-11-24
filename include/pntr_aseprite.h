@@ -575,7 +575,8 @@ PNTR_ASEPRITE_API void pntr_aseprite_update_tag(pntr_aseprite_tag* tag, float de
                     // Aseprite, each pass in one direction counts as one repeat.
                     tag->currentFrame -= tag->direction;
                     tag->direction = -tag->direction;
-                    if (pntr_aseprite_tag_next_cycle(tag)) {
+                    // A one-frame tag has nowhere to step inward to.
+                    if (pntr_aseprite_tag_next_cycle(tag) && aseTag->from_frame != aseTag->to_frame) {
                         tag->currentFrame += tag->direction;
                     }
                 }
