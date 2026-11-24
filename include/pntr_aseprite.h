@@ -313,11 +313,20 @@ PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite_from_memory(unsigned char* f
 
     // Build the sprite's final image.
     pntr_image* image = pntr_gen_image_color(ase->w * ase->frame_count, ase->h, PNTR_BLANK);
+    if (image == NULL) {
+        pntr_unload_aseprite(aseprite);
+        return NULL;
+    }
 
     // Load all frames.
     for (int i = 0; i < ase->frame_count; i++) {
         ase_frame_t* frame = ase->frames + i;
         pntr_image* tile = pntr_image_from_pixelformat(frame->pixels, ase->w, ase->h, PNTR_PIXELFORMAT_RGBA8888);
+        if (tile == NULL) {
+            pntr_unload_image(image);
+            pntr_unload_aseprite(aseprite);
+            return NULL;
+        }
         pntr_draw_image(image, tile, i * ase->w, 0);
         pntr_unload_image(tile);
     }
@@ -712,7 +721,9 @@ PNTR_ASEPRITE_API pntr_aseprite* pntr_load_aseprite_from_assetsys(assetsys_t* sy
         return NULL;
     }
 
-    return pntr_load_aseprite_from_memory(data, size);
+    pntr_aseprite* aseprite = pntr_load_aseprite_from_memory(data, size);
+    pntr_unload_file(data);
+    return aseprite;
 }
 #endif  // PNTR_ASSETSYS_API
 
